@@ -10,9 +10,9 @@ export default defineNitroPlugin(() => {
     try {
       await $fetch("/api/automation/tick", { method: "POST" });
     } catch (err) {
-      console.error("[AUTOMATION] tick failed", err);
+      console.error("[AUTOMATION-TICKS] tick failed", err);
     }
   }, INTERVAL_MS);
 
-  console.log("[AUTOMATION] periodic tick started");
+  console.log("[AUTOMATION-TICKS] periodic tick started");
 });

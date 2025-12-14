@@ -1,33 +1,43 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue"
+import { ref, onMounted } from "vue";
+import { useSystemStatus } from "~/composables/useSystemStatus"
 
-type Any = any
+const { plexStatus, nasReady } = useSystemStatus()
 
-const loading = ref(true)
-const error = ref<string | null>(null)
-const data = ref<Any | null>(null)
+const plexColor = computed(() => {
+  if (plexStatus.value === "green") return "green"
+  if (plexStatus.value === "yellow") return "yellow"
+  return "red"
+})
+const nasColor  = computed(() => nasReady.value  ? "green" : "red")
+
+type Any = any;
+
+const loading = ref(true);
+const error = ref<string | null>(null);
+const data = ref<Any | null>(null);
 
 function format(d: string | Date | null) {
-  if (!d) return "–"
-  const date = typeof d === "string" ? new Date(d) : d
+  if (!d) return "–";
+  const date = typeof d === "string" ? new Date(d) : d;
   return date.toLocaleString("de-AT", {
     hour: "2-digit",
     minute: "2-digit",
     day: "2-digit",
     month: "2-digit",
-  })
+  });
 }
 
 onMounted(async () => {
   try {
-    loading.value = true
-    data.value = await $fetch("/api/automation/status")
+    loading.value = true;
+    data.value = await $fetch("/api/automation/status");
   } catch {
-    error.value = "Dashboard konnte nicht geladen werden"
+    error.value = "Dashboard konnte nicht geladen werden";
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-})
+});
 </script>
 
 <template>
@@ -61,7 +71,8 @@ onMounted(async () => {
             : 'info'
         "
       >
-        <strong>{{ data.explanation.title }}</strong><br />
+        <strong>{{ data.explanation.title }}</strong
+        ><br />
         {{ data.explanation.description }}
       </v-alert>
 
@@ -74,9 +85,8 @@ onMounted(async () => {
               <v-chip
                 size="small"
                 label
-                :color="data.devices.nas === 'on' ? 'green' : 'red'"
               >
-                {{ data.devices.nas }}
+                <v-icon :color="nasColor" size="18">mdi-circle</v-icon>
               </v-chip>
             </v-card-text>
           </v-card>
@@ -89,20 +99,21 @@ onMounted(async () => {
               <v-chip
                 size="small"
                 label
-                :color="data.devices.vuplus === 'on' ? 'green' : 'red'"
               >
-                {{ data.devices.vuplus }}
+              <v-icon v-if="data.devices.vuplus === 'off'" color='red' size="18">mdi-circle</v-icon>
+              <v-icon v-if="data.devices.vuplus === 'on'"color="green" size="18">mdi-circle</v-icon>
               </v-chip>
             </v-card-text>
           </v-card>
         </v-col>
 
+        <!-- PLEX STATUS -->
         <v-col cols="12" md="4">
           <v-card variant="tonal">
-            <v-card-title>Automation</v-card-title>
+            <v-card-title>Plex</v-card-title>
             <v-card-text>
               <v-chip size="small" label>
-                {{ data.automation.state }}
+                <v-icon :color="plexColor" size="18">mdi-circle</v-icon>
               </v-chip>
             </v-card-text>
           </v-card>
@@ -110,15 +121,62 @@ onMounted(async () => {
       </v-row>
 
       <!-- ACTIVE WINDOW -->
-      <v-card
-        v-if="data.activeWindow"
-        variant="tonal"
-        class="mb-4"
-      >
+      <v-card v-if="data.activeWindow" variant="tonal" class="mb-4">
         <v-card-title>Aktives Zeitfenster</v-card-title>
         <v-card-text>
-          <strong>{{ data.activeWindow.label }}</strong><br />
+          <strong>{{ data.activeWindow.label }}</strong
+          ><br />
           {{ data.activeWindow.start }} – {{ data.activeWindow.end }}
+        </v-card-text>
+      </v-card>
+
+      <!-- STATUS -->
+      <v-card variant="tonal" class="mb-4">
+        <v-card-title>Status</v-card-title>
+        <v-card-text>
+          <v-table density="compact">
+            <tbody>
+              <tr>
+                <td><strong>Automation State</strong></td>
+                <td>
+                  <v-chip
+                    size="small"
+                    label
+                    :color="
+                      data.automation.state === 'RUNNING'
+                        ? 'green'
+                        : data.automation.state === 'STARTING'
+                        ? 'blue'
+                        : data.automation.state === 'SHUTTING_DOWN'
+                        ? 'orange'
+                        : data.automation.state === 'ERROR'
+                        ? 'red'
+                        : data.automation.state === 'DRY_RUN'
+                        ? 'brown'
+                        : 'grey'
+                    "
+                  >
+                    {{ data.automation.state }}
+                  </v-chip>
+                </td>
+              </tr>
+
+              <tr>
+                <td><strong>Seit</strong></td>
+                <td>{{ format(data.automation.since) }}</td>
+              </tr>
+
+              <tr>
+                <td><strong>Letzte Decision</strong></td>
+                <td>{{ data.automation.lastDecision ?? "–" }}</td>
+              </tr>
+
+              <tr>
+                <td><strong>Grund (intern)</strong></td>
+                <td>{{ data.automation.reason ?? "–" }}</td>
+              </tr>
+            </tbody>
+          </v-table>
         </v-card-text>
       </v-card>
 
@@ -164,9 +222,7 @@ onMounted(async () => {
           </v-btn>
         </v-col>
         <v-col cols="12" md="6">
-          <v-btn block color="secondary" to="/settings">
-            Einstellungen
-          </v-btn>
+          <v-btn block color="secondary" to="/settings"> Einstellungen </v-btn>
         </v-col>
       </v-row>
     </template>

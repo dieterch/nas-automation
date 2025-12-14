@@ -31,6 +31,13 @@
       "date": "2025-12-24",
       "start": "18:00",
       "end": "23:59"
+    },
+    {
+      "active": true,
+      "type": "once",
+      "start": "09:15",
+      "end": "09:30",
+      "date": "2025-12-14"
     }
   ],
   "AUTOMATION_ACTIONS_ENABLED": false,

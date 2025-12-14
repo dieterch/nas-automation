@@ -72,8 +72,8 @@ const drawer = ref(true)
 const menu = [
   { title: "Dashboard", to: "/" },
   { title: "Aufnahmeplan", to: "/recordings" },
-  { title: "NAS Status", to: "/nas" },
-  { title: "Automation Regeln", to: "/automation" },
+  // { title: "Automation Regeln", to: "/automation" },
   { title: "Einstellungen", to: "/settings" },
+  { title: "Manual", to: "/manual" },
 ]
 </script>

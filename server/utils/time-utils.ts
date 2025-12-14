@@ -112,6 +112,12 @@ export function getActiveScheduledWindow(
   }
 
   return null;
+  // return {
+  //   type: "none",
+  //   start: null,
+  //   end: null,
+  //   label: "nix",
+  // };  
 }
 
 /* -------------------------------------------------- */

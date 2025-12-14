@@ -11,7 +11,7 @@ export default defineNitroPlugin(() => {
 
       await runAutomationDryRun(schedule)
     } catch (e) {
-      console.error("[AUTOMATION] error", e)
+      console.error("[AUTOMATION-RUNNER] error", e)
     }
   }, 60_000) // 1 Minute
 })

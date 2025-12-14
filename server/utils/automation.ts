@@ -4,6 +4,7 @@ import { isProxmoxBackupRunning } from "./proxmox-utils";
 import { loadConfig } from "./config";
 import { applyDecision } from "./automation-machine";
 import { isNowInScheduledPeriod } from "./time-utils";
+import { ParsedRecording, parseRecording} from "./plex-recording";
 
 /* ------------------------------------------------------------------
    TYPES
@@ -16,12 +17,20 @@ type Decision =
   | "NO_ACTION"
   | "ERROR_REQUIRED_DEVICE";
 
-interface ParsedRecording {
-  aufnahmeStart: Date;
-  aufnahmeEnde: Date;
-  einschaltZeit: Date;
-  ausschaltZeit: Date;
-}
+// interface ParsedRecording {
+//   seriesTitle?: string;
+//   episodeTitle?: string;
+
+//   seasonNumber?: number;
+//   episodeNumber?: number;
+
+//   displayTitle: string;
+
+//   aufnahmeStart: Date;
+//   aufnahmeEnde: Date;
+//   einschaltZeit: Date;
+//   ausschaltZeit: Date;
+// }
 
 /* ------------------------------------------------------------------
    NIGHT PERIOD (bleibt separat!)
@@ -66,16 +75,10 @@ export async function runAutomationDryRun(schedule: any) {
   /* --------------------------------------------------------------
      1) GEPLANTE ZEITFENSTER (daily / weekly / once)
   -------------------------------------------------------------- */
-  const forced = isNowInScheduledPeriod(
-    now,
-    config.SCHEDULED_ON_PERIODS
-  );
+  const forced = isNowInScheduledPeriod(now, config.SCHEDULED_ON_PERIODS);
 
   if (forced.active) {
-    return decide(
-      "KEEP_RUNNING",
-      forced.reason ?? "scheduled on window"
-    );
+    return decide("KEEP_RUNNING", forced.reason ?? "scheduled on window");
   }
 
   const inNightPeriod = isNowInNightPeriod(now, config.NIGHT_PERIOD);
@@ -88,8 +91,7 @@ export async function runAutomationDryRun(schedule: any) {
   /* --------------------------------------------------------------
      2) RECORDINGS PARSE
   -------------------------------------------------------------- */
-  const raw =
-    schedule?.data?.MediaContainer?.MediaGrabOperation ?? [];
+  const raw = schedule?.data?.MediaContainer?.MediaGrabOperation ?? [];
 
   if (!raw.length) {
     if (nasOnline || vuOn) {
@@ -108,9 +110,34 @@ export async function runAutomationDryRun(schedule: any) {
     (a, b) => a.aufnahmeStart.getTime() - b.aufnahmeStart.getTime()
   );
 
-  const next = recordings.find(
-    (r) => r.aufnahmeEnde > now
+  /* --------------------------------------------------------------
+   A) AKTUELL LAUFENDE AUFNAHME
+-------------------------------------------------------------- */
+  const running = recordings.find(
+    (r) => now >= r.aufnahmeStart && now <= r.aufnahmeEnde
   );
+
+  if (running) {
+    const label = running.displayTitle
+      ? `recording active: ${running.displayTitle}`
+      : "recording active";
+
+    if (!nasOnline || !vuOn) {
+      return decide(
+        "ERROR_REQUIRED_DEVICE",
+        `${label} (nas=${nasOnline}, vuplus=${vuOn})`
+      );
+    }
+
+    return decide("KEEP_RUNNING", label);
+  }
+
+  /* --------------------------------------------------------------
+   B) NÄCHSTE ZUKÜNFTIGE AUFNAHME
+-------------------------------------------------------------- */
+  const next = recordings
+    .filter((r) => r.aufnahmeStart > now)
+    .sort((a, b) => a.aufnahmeStart.getTime() - b.aufnahmeStart.getTime())[0];
 
   if (!next) {
     if (nasOnline || vuOn) {
@@ -122,41 +149,33 @@ export async function runAutomationDryRun(schedule: any) {
   }
 
   /* --------------------------------------------------------------
-     3) BEFORE RECORDING → START REQUIRED DEVICES
-  -------------------------------------------------------------- */
+   C) BEFORE RECORDING → START REQUIRED DEVICES
+-------------------------------------------------------------- */
   if (now >= next.einschaltZeit) {
     if (!nasOnline || !vuOn) {
+      const label = next.displayTitle
+        ? `approaching recording: ${next.displayTitle}`
+        : "approaching recording";
+
       return decide(
         "START_REQUIRED_DEVICES",
-        `approaching recording (nas=${nasOnline}, vuplus=${vuOn})`
+        `${label} (nas=${nasOnline}, vuplus=${vuOn})`
       );
     }
-  }
-
-  /* --------------------------------------------------------------
-     4) RECORDING ACTIVE
-  -------------------------------------------------------------- */
-  if (
-    now >= next.aufnahmeStart &&
-    now <= next.aufnahmeEnde
-  ) {
-    if (!nasOnline || !vuOn) {
-      return decide(
-        "ERROR_REQUIRED_DEVICE",
-        `recording active but device missing (nas=${nasOnline}, vuplus=${vuOn})`
-      );
-    }
-    return decide("KEEP_RUNNING", "recording active");
   }
 
   /* --------------------------------------------------------------
      5) GRACE / SHUTDOWN
   -------------------------------------------------------------- */
-  const gapMinutes =
-    (next.aufnahmeStart.getTime() - now.getTime()) / 60000;
+  const gapMinutes = (next.aufnahmeStart.getTime() - now.getTime()) / 60000;
 
   if (gapMinutes <= config.GRACE_PERIOD_MIN) {
-    return decide("KEEP_RUNNING", "within grace period");
+    return decide(
+      "KEEP_RUNNING",
+      next.displayTitle
+        ? `within grace period before | ${next.displayTitle}`
+        : "within grace period"
+    );
   }
 
   if (now >= next.ausschaltZeit) {
@@ -178,42 +197,88 @@ function decide(decision: Decision, reason: string) {
     reason,
   };
 
-  console.log("[AUTOMATION]", entry);
+  // console.log(`[AUTOMATION-UTIL]    decision=${entry.decision} reason="${entry.reason}"`);
   applyDecision(decision, reason);
   return entry;
 }
 
-/* ------------------------------------------------------------------
-   RECORD PARSER
------------------------------------------------------------------- */
-function parseRecording(
-  rec: any,
-  config: any
-): ParsedRecording | null {
-  const media = rec.Metadata?.Media?.[0];
-  if (!media) return null;
+// /* ------------------------------------------------------------------
+//    RECORD PARSER
+// ------------------------------------------------------------------ */
 
-  const begins = media.beginsAt * 1000;
-  const ends = media.endsAt * 1000;
+// function parseRecording(
+//   rec: any,
+//   config: any
+// ): ParsedRecording | null {
+//   const meta = rec.Metadata;
+//   const media = meta?.Media?.[0];
+//   if (!meta || !media) return null;
 
-  const startOffset =
-    Number(media.startOffsetSeconds ?? 0) * 1000;
-  const endOffset =
-    Number(media.endOffsetSeconds ?? 0) * 1000;
+//   const begins = media.beginsAt * 1000;
+//   const ends = media.endsAt * 1000;
 
-  const aufnahmeStart = new Date(begins - startOffset);
-  const aufnahmeEnde = new Date(ends + endOffset);
+//   const startOffset =
+//     Number(media.startOffsetSeconds ?? 0) * 1000;
+//   const endOffset =
+//     Number(media.endOffsetSeconds ?? 0) * 1000;
 
-  return {
-    aufnahmeStart,
-    aufnahmeEnde,
-    einschaltZeit: new Date(
-      aufnahmeStart.getTime() -
-        config.VORLAUF_AUFWACHEN_MIN * 60000
-    ),
-    ausschaltZeit: new Date(
-      aufnahmeEnde.getTime() +
-        config.AUSSCHALT_NACHLAUF_MIN * 60000
-    ),
-  };
-}
+//   const aufnahmeStart = new Date(begins - startOffset);
+//   const aufnahmeEnde = new Date(ends + endOffset);
+
+//   // Plex Meta
+//   const seriesTitle =
+//     meta.grandparentTitle ?? meta.parentTitle;
+
+//   const episodeTitle =
+//     meta.type === "episode" ? meta.displayTitle : undefined;
+
+//   const seasonNumber =
+//     meta.parentIndex != null
+//       ? Number(meta.parentIndex)
+//       : undefined;
+
+//   const episodeNumber =
+//     meta.index != null
+//       ? Number(meta.index)
+//       : undefined;
+
+//   // S02E05 Format
+//   const seasonEpisode =
+//     seasonNumber != null && episodeNumber != null
+//       ? `S${String(seasonNumber).padStart(2, "0")}E${String(
+//           episodeNumber
+//         ).padStart(2, "0")}`
+//       : undefined;
+
+//   // DISPLAY TITLE (zentral!)
+//   let displayTitle = meta.displayTitle ?? "Unbekannte Aufnahme";
+
+//   if (meta.type === "episode" && seriesTitle) {
+//     displayTitle = seasonEpisode
+//       ? episodeTitle
+//         ? `${seriesTitle} – ${seasonEpisode} – ${episodeTitle}`
+//         : `${seriesTitle} – ${seasonEpisode}`
+//       : episodeTitle
+//       ? `${seriesTitle} – ${episodeTitle}`
+//       : seriesTitle;
+//   }
+
+//   return {
+//     seriesTitle,
+//     episodeTitle,
+//     seasonNumber,
+//     episodeNumber,
+//     displayTitle,
+
+//     aufnahmeStart,
+//     aufnahmeEnde,
+//     einschaltZeit: new Date(
+//       aufnahmeStart.getTime() -
+//         config.VORLAUF_AUFWACHEN_MIN * 60000
+//     ),
+//     ausschaltZeit: new Date(
+//       aufnahmeEnde.getTime() +
+//         config.AUSSCHALT_NACHLAUF_MIN * 60000
+//     ),
+//   };
+// }

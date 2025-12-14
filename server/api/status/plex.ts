@@ -12,7 +12,8 @@ export default defineEventHandler(async () => {
     }
 
     // GELB: Plex im Maintenance/DB-Migration Mode
-    if (body.includes('<Response') && body.includes('503') && body.includes('Maintenance')) {
+     if (res.status === 200 && body.includes("<Response")) {
+    // if (body.includes('<Response') && body.includes('503') && body.includes('Maintenance')) {
       return { status: "yellow" }
     }
 

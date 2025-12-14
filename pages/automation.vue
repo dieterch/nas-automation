@@ -102,7 +102,7 @@ onMounted(async () => {
                         size="small"
                         label
                         :color="
-                          data.automation.state === 'RUNNING'
+                          data.automation.state === 'RUNNING' 
                             ? 'green'
                             : data.automation.state === 'STARTING'
                             ? 'blue'
@@ -110,6 +110,8 @@ onMounted(async () => {
                             ? 'orange'
                             : data.automation.state === 'ERROR'
                             ? 'red'
+                            : data.automation.state === 'DRY_RUN'
+                            ? 'brown'
                             : 'grey'
                         "
                       >

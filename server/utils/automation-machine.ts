@@ -33,10 +33,7 @@ export async function applyDecision(
      GLOBAL LOGGING (immer)
   -------------------------------------------------------------- */
   logAutomation({ decision, reason })
-
-  console.log(
-    `[AUTOMATION] decision=${decision} actionsEnabled=${actionsEnabled} reason="${reason}"`
-  )
+  console.log(`[AUTOMATION-MACHINE] decision=${decision} reason="${reason}" actionsEnabled=${actionsEnabled}`)
 
   /* --------------------------------------------------------------
      DRY RUN MODE
@@ -118,7 +115,7 @@ export async function applyDecision(
         break
     }
   } catch (err) {
-    console.error("[AUTOMATION] action failed", err)
+    console.error("[AUTOMATION-MACHINE] action failed", err)
 
     saveState(
       "ERROR",

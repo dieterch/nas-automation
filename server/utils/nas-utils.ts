@@ -201,7 +201,7 @@ export async function waitForPlexReady(timeoutMs = 180_000) {
       })
 
       if (result?.MediaContainer) {
-        console.log("Plex is READY")
+        console.log("[NAS-UTIL] Plex is READY")
         return true
       }
     } catch (err) {
