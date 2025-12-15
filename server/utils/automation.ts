@@ -208,7 +208,7 @@ function decide(decision: Decision, reason: string) {
     reason,
   };
 
-  // console.log(`[AUTOMATION-UTIL]    decision=${entry.decision} reason="${entry.reason}"`);
+  // console.log(`[AUTOMATION][UTIL]    decision=${entry.decision} reason="${entry.reason}"`);
   applyDecision(decision, reason);
   return entry;
 }

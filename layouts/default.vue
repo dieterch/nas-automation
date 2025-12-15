@@ -66,7 +66,7 @@ const plexColor = computed(() => {
 const nasColor = computed(() => (nasReady.value ? "green" : "red"));
 const vuPlusColor = computed(() => (vuPlusReady.value ? "green" : "red"));
 
-const drawer = ref(true);
+const drawer = ref(false);
 
 const menu = [
   { title: "Dashboard", to: "/" },

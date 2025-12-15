@@ -6,6 +6,7 @@ const LOG_FILE = resolve("data/automation.log.jsonl")
 export function logAutomation(entry: Record<string, any>) {
   const line = JSON.stringify({
     time: new Date().toISOString(),
+    // time: new Date().toLocaleString(),
     ...entry,
   })
 
