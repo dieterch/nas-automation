@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue"
+import type { ParsedRecording } from "../utils/plex-recording"
+import { parseRecording } from "../utils/plex-recording"
+
 
 /* ------------------------------------------------------------------
    MINIMALE TYPHILFE
 ------------------------------------------------------------------ */
-type AnyRecord = Record<string, any>
+// type AnyRecord = Record<string, any>
+type AnyRecord = Record<any, any>
 
 /* ------------------------------------------------------------------
    STATES
@@ -41,59 +45,71 @@ function format_time(d: Date | null | undefined): string {
   })
 }
 
-/* ------------------------------------------------------------------
-   RECORD PARSING
------------------------------------------------------------------- */
-function parseRecording(rec: AnyRecord): AnyRecord | null {
-  if (!config.value) return null
+// /* ------------------------------------------------------------------
+//    RECORD PARSING
+// ------------------------------------------------------------------ */
+// function parseRecording(rec: AnyRecord): AnyRecord | null {
+//   if (!config.value) return null
 
-  const media = rec.Metadata?.Media?.[0]
-  if (!media) return null
+//   const media = rec.Metadata?.Media?.[0]
+//   if (!media) return null
 
-  const begins: number = media.beginsAt
-  const ends: number = media.endsAt
+//   const begins: number = media.beginsAt
+//   const ends: number = media.endsAt
 
-  const startOffset = Number(media.startOffsetSeconds ?? 0)
-  const endOffset = Number(media.endOffsetSeconds ?? 0)
+//   const startOffset = Number(media.startOffsetSeconds ?? 0)
+//   const endOffset = Number(media.endOffsetSeconds ?? 0)
 
-  const aufnahmeStart = toDate(begins - startOffset)
-  const aufnahmeEnde = toDate(ends + endOffset)
+//   const aufnahmeStart = toDate(begins - startOffset)
+//   const aufnahmeEnde = toDate(ends + endOffset)
 
-  const sendungsStart = toDate(begins)
-  const sendungsEnde = toDate(ends)
+//   const sendungsStart = toDate(begins)
+//   const sendungsEnde = toDate(ends)
 
-  const einschaltZeit = new Date(
-    aufnahmeStart.getTime() -
-      config.value.VORLAUF_AUFWACHEN_MIN * 60000
-  )
+//   const einschaltZeit = new Date(
+//     aufnahmeStart.getTime() -
+//       config.value.VORLAUF_AUFWACHEN_MIN * 60000
+//   )
 
-  const ausschaltZeit = new Date(
-    aufnahmeEnde.getTime() +
-      config.value.AUSSCHALT_NACHLAUF_MIN * 60000
-  )
+//   const ausschaltZeit = new Date(
+//     aufnahmeEnde.getTime() +
+//       config.value.AUSSCHALT_NACHLAUF_MIN * 60000
+//   )
 
-  return {
-    rec,
-    titel: rec.Metadata?.grandparentTitle || rec.Metadata?.title,
-    aufnahmeStart,
-    aufnahmeEnde,
-    sendungsStart,
-    sendungsEnde,
-    startOffset,
-    endOffset,
-    einschaltZeit,
-    ausschaltZeit,
-  }
-}
+//   return {
+//     rec,
+//     titel: rec.Metadata?.grandparentTitle || rec.Metadata?.title,
+//     aufnahmeStart,
+//     aufnahmeEnde,
+//     sendungsStart,
+//     sendungsEnde,
+//     startOffset,
+//     endOffset,
+//     einschaltZeit,
+//     ausschaltZeit,
+//   }
+// }
 
 /* ------------------------------------------------------------------
    SORTIERUNG
 ------------------------------------------------------------------ */
-const parsedAndSorted = computed<AnyRecord[]>(() => {
+// const parsedAndSorted = computed<AnyRecord[]>(() => {
+//   return items.value
+//     .map(parseRecording)
+//     .filter((r): r is AnyRecord => r !== null)
+//     .sort((a, b) => a.sendungsStart.getTime() - b.sendungsStart.getTime())
+// })
+const parsedAndSorted = computed<ParsedRecording[]>(() => {
+  if (!config.value) return []
+
   return items.value
-    .map(parseRecording)
-    .filter((r): r is AnyRecord => r !== null)
-    .sort((a, b) => a.sendungsStart.getTime() - b.sendungsStart.getTime())
+    .map((r) => parseRecording(r, config.value))
+    .filter((r): r is ParsedRecording => r !== null)
+    .sort(
+      (a, b) =>
+        a.sendungsStart.getTime() -
+        b.sendungsStart.getTime()
+    )
 })
 
 /* ------------------------------------------------------------------
@@ -204,7 +220,7 @@ onMounted(async () => {
               variant="flat"
             >
               <v-card-title>
-                Aufnahme #{{ item.index }} – {{ item.titel }}
+                Aufnahme #{{ item.index }} – {{ item.displayTitle }}
               </v-card-title>
 
               <v-card-text>

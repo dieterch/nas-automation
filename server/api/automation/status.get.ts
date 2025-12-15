@@ -4,7 +4,7 @@ import { readPlexCache } from "../../utils/plex-cache";
 import { isNasOnlineByPort } from "../../utils/nas-utils";
 import { isVuPlusOn } from "../../utils/vuplus-utils";
 import { getActiveScheduledWindow } from "../../utils/time-utils";
-import { ParsedRecording, parseRecording} from "../../utils/plex-recording";
+import { ParsedRecording, parseRecording} from "../../../utils/plex-recording";
 
 export default defineEventHandler(async () => {
   const state = loadState();
@@ -59,7 +59,8 @@ export default defineEventHandler(async () => {
       (a: any, b: any) => a.aufnahmeStart.getTime() - b.aufnahmeStart.getTime()
     );
 
-  const next = recordings.find((r: any) => r.aufnahmeEnde > now) ?? null;
+  // finde nächste Aufnahme 
+  const next = recordings.find((r: any) => r.aufnahmeStart > now) ?? null;
 
   return {
     automation: {
@@ -90,29 +91,3 @@ export default defineEventHandler(async () => {
       : { type: "none" },
   };
 });
-
-// function parseRecording(rec: any, config: any) {
-//   const media = rec?.Metadata?.Media?.[0];
-//   if (!media) return null;
-
-//   const begins = media.beginsAt * 1000;
-//   const ends = media.endsAt * 1000;
-
-//   const startOffset = Number(media.startOffsetSeconds ?? 0) * 1000;
-//   const endOffset = Number(media.endOffsetSeconds ?? 0) * 1000;
-
-//   const aufnahmeStart = new Date(begins - startOffset);
-//   const aufnahmeEnde = new Date(ends + endOffset);
-
-//   return {
-//     title: rec?.Metadata?.title ?? "Unbekannte Aufnahme",
-//     aufnahmeStart,
-//     aufnahmeEnde,
-//     einschaltZeit: new Date(
-//       aufnahmeStart.getTime() - config.VORLAUF_AUFWACHEN_MIN * 60000
-//     ),
-//     ausschaltZeit: new Date(
-//       aufnahmeEnde.getTime() + config.AUSSCHALT_NACHLAUF_MIN * 60000
-//     ),
-//   };
-// }
