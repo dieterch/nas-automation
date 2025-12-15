@@ -4,7 +4,7 @@ import { readPlexCache } from "../../utils/plex-cache";
 import { isNasOnlineByPort } from "../../utils/nas-utils";
 import { isVuPlusOn } from "../../utils/vuplus-utils";
 import { getActiveScheduledWindow } from "../../utils/time-utils";
-import { ParsedRecording, parseRecording} from "../../../utils/plex-recording";
+import { ParsedRecording, parseRecording } from "../../../utils/plex-recording";
 
 export default defineEventHandler(async () => {
   const state = loadState();
@@ -59,8 +59,8 @@ export default defineEventHandler(async () => {
       (a: any, b: any) => a.aufnahmeStart.getTime() - b.aufnahmeStart.getTime()
     );
 
-  // finde nächste Aufnahme 
-  const next = recordings.find((r: any) => r.aufnahmeStart > now) ?? null;
+  // const next = recordings.find((r: any) => r.aufnahmeStart > now) ?? null;
+  const nextEvent = computeNextEvent(recordings, now);
 
   return {
     automation: {
@@ -78,16 +78,69 @@ export default defineEventHandler(async () => {
       vuplus: vuPlusOn ? "on" : "off",
     },
     activeWindow,
-    nextEvent: next
-      ? {
-          type: "recording",
-          title: next.displayTitle,
-          episode: next.episodeTitle,
-          aufnahmeStart: next.aufnahmeStart.toISOString(),
-          aufnahmeEnde: next.aufnahmeEnde.toISOString(),
-          einschaltZeit: next.einschaltZeit.toISOString(),
-          ausschaltZeit: next.ausschaltZeit.toISOString(),
-        }
-      : { type: "none" },
+    nextEvent
   };
 });
+
+function computeNextEvent(recordings: ParsedRecording[], now: Date) {
+  /**
+   * 1) Laufende Aufnahmen (technisch + inhaltlich)
+   *    → AufnahmeStart <= now < AufnahmeEnde
+   */
+  const runningRecordings = recordings.filter(
+    (r) => r.aufnahmeStart <= now && r.aufnahmeEnde > now
+  );
+
+  if (runningRecordings.length > 0) {
+    return {
+      type: "RECORDING_RUNNING",
+      count: runningRecordings.length,
+      recordings: runningRecordings.map((r) => ({
+        title: r.displayTitle,
+        from: r.sendungsStart,
+        to: r.sendungsEnde,
+      })),
+    };
+  }
+
+  /**
+   * 2) Nächste Aufnahme (Automation-relevant!)
+   *    → Vorlauf / Einschaltzeit
+   */
+  const nextRecording = recordings
+    .filter((r) => r.einschaltZeit > now)
+    .sort(
+      (a, b) =>
+        a.einschaltZeit.getTime() - b.einschaltZeit.getTime()
+    )[0];
+
+  if (nextRecording) {
+    return {
+      type: "RECORDING_START",
+      at: nextRecording.einschaltZeit,
+      title: nextRecording.displayTitle,
+      sendungVon: nextRecording.sendungsStart,
+      sendungBis: nextRecording.sendungsEnde,
+    };
+  }
+
+  /**
+   * 3) Nur Nachlauf aktiv
+   *    → technisch noch aktiv, aber keine Aufnahme läuft / startet
+   */
+  const inPostRun = recordings.filter(
+    (r) => r.ausschaltZeit > now
+  );
+
+  if (inPostRun.length > 0) {
+    return {
+      type: "RECORDING_END",
+      count: inPostRun.length,
+    };
+  }
+
+  /**
+   * 4) Nichts mehr relevant
+   */
+  return { type: "IDLE" };
+}

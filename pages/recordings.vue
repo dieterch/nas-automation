@@ -1,147 +1,87 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue"
-import type { ParsedRecording } from "../utils/plex-recording"
-import { parseRecording } from "../utils/plex-recording"
-
+import { ref, onMounted, computed } from "vue";
+import type { ParsedRecording } from "../utils/plex-recording";
+import { parseRecording } from "../utils/plex-recording";
 
 /* ------------------------------------------------------------------
    MINIMALE TYPHILFE
 ------------------------------------------------------------------ */
 // type AnyRecord = Record<string, any>
-type AnyRecord = Record<any, any>
+type AnyRecord = Record<any, any>;
 
 /* ------------------------------------------------------------------
    STATES
 ------------------------------------------------------------------ */
-const items = ref<AnyRecord[]>([])
-const loading = ref<boolean>(true)
-const error = ref<any>(null)
-const config = ref<AnyRecord | null>(null)
-const lastFetch = ref<string | null>(null)
+const items = ref<AnyRecord[]>([]);
+const loading = ref<boolean>(true);
+const error = ref<any>(null);
+const config = ref<AnyRecord | null>(null);
+const lastFetch = ref<string | null>(null);
 
 /* ------------------------------------------------------------------
    HILFSFUNKTIONEN
 ------------------------------------------------------------------ */
 function toDate(secs: number): Date {
-  return new Date(secs * 1000)
+  return new Date(secs * 1000);
 }
 
 function format(d: Date | null | undefined): string {
-  if (!d) return "n/a"
+  if (!d) return "n/a";
   return d.toLocaleString("de-AT", {
     hour: "2-digit",
     minute: "2-digit",
     day: "2-digit",
     month: "2-digit",
     year: "2-digit",
-  })
+  });
 }
 
 function format_time(d: Date | null | undefined): string {
-  if (!d) return "n/a"
+  if (!d) return "n/a";
   return d.toLocaleString("de-AT", {
     hour: "2-digit",
     minute: "2-digit",
-  })
+  });
 }
 
-// /* ------------------------------------------------------------------
-//    RECORD PARSING
-// ------------------------------------------------------------------ */
-// function parseRecording(rec: AnyRecord): AnyRecord | null {
-//   if (!config.value) return null
-
-//   const media = rec.Metadata?.Media?.[0]
-//   if (!media) return null
-
-//   const begins: number = media.beginsAt
-//   const ends: number = media.endsAt
-
-//   const startOffset = Number(media.startOffsetSeconds ?? 0)
-//   const endOffset = Number(media.endOffsetSeconds ?? 0)
-
-//   const aufnahmeStart = toDate(begins - startOffset)
-//   const aufnahmeEnde = toDate(ends + endOffset)
-
-//   const sendungsStart = toDate(begins)
-//   const sendungsEnde = toDate(ends)
-
-//   const einschaltZeit = new Date(
-//     aufnahmeStart.getTime() -
-//       config.value.VORLAUF_AUFWACHEN_MIN * 60000
-//   )
-
-//   const ausschaltZeit = new Date(
-//     aufnahmeEnde.getTime() +
-//       config.value.AUSSCHALT_NACHLAUF_MIN * 60000
-//   )
-
-//   return {
-//     rec,
-//     titel: rec.Metadata?.grandparentTitle || rec.Metadata?.title,
-//     aufnahmeStart,
-//     aufnahmeEnde,
-//     sendungsStart,
-//     sendungsEnde,
-//     startOffset,
-//     endOffset,
-//     einschaltZeit,
-//     ausschaltZeit,
-//   }
-// }
-
-/* ------------------------------------------------------------------
-   SORTIERUNG
------------------------------------------------------------------- */
-// const parsedAndSorted = computed<AnyRecord[]>(() => {
-//   return items.value
-//     .map(parseRecording)
-//     .filter((r): r is AnyRecord => r !== null)
-//     .sort((a, b) => a.sendungsStart.getTime() - b.sendungsStart.getTime())
-// })
 const parsedAndSorted = computed<ParsedRecording[]>(() => {
-  if (!config.value) return []
+  if (!config.value) return [];
 
   return items.value
     .map((r) => parseRecording(r, config.value))
     .filter((r): r is ParsedRecording => r !== null)
-    .sort(
-      (a, b) =>
-        a.sendungsStart.getTime() -
-        b.sendungsStart.getTime()
-    )
-})
+    .sort((a, b) => a.sendungsStart.getTime() - b.sendungsStart.getTime());
+});
 
 /* ------------------------------------------------------------------
    TIMELINE GENERIEREN
 ------------------------------------------------------------------ */
 const timelineEntries = computed<AnyRecord[]>(() => {
-  if (!config.value) return []
+  if (!config.value) return [];
 
-  const list = parsedAndSorted.value
-  const entries: AnyRecord[] = []
+  const list = parsedAndSorted.value;
+  const entries: AnyRecord[] = [];
 
   for (let i = 0; i < list.length; i++) {
-    const curr = list[i]!
-    const next = list[i + 1]
+    const curr = list[i]!;
+    const next = list[i + 1];
 
-    let gapMinutes: number | null = null
-    let skipShutdown = false
-    let wiederstart: Date | null = null
+    let gapMinutes: number | null = null;
+    let skipShutdown = false;
+    let wiederstart: Date | null = null;
 
     if (next) {
-      const diffMs =
-        next.aufnahmeStart.getTime() - curr.aufnahmeEnde.getTime()
-      gapMinutes = Math.round(diffMs / 60000)
+      const diffMs = next.aufnahmeStart.getTime() - curr.aufnahmeEnde.getTime();
+      gapMinutes = Math.round(diffMs / 60000);
 
       if (gapMinutes < config.value.GRACE_PERIOD_MIN) {
-        skipShutdown = true
+        skipShutdown = true;
       }
 
       wiederstart = new Date(
         next.aufnahmeStart.getTime() -
           config.value.VORLAUF_AUFWACHEN_MIN * 60000
-      )
+      );
     }
 
     entries.push({
@@ -151,39 +91,44 @@ const timelineEntries = computed<AnyRecord[]>(() => {
       gapMinutes,
       skipShutdown,
       wiederstart,
-    })
+    });
 
     if (!skipShutdown && next && wiederstart) {
       entries.push({
         type: "shutdown",
         from: curr.ausschaltZeit,
         to: wiederstart,
-      })
+      });
     }
   }
 
-  return entries
-})
+  return entries;
+});
 
 /* ------------------------------------------------------------------
    API LOAD
 ------------------------------------------------------------------ */
 onMounted(async () => {
   try {
-    loading.value = true
-    config.value = await $fetch("/api/config")
+    loading.value = true;
+    config.value = await $fetch("/api/config");
 
-    const res: AnyRecord = await $fetch("/api/plex/scheduled")
-    items.value =
-      res.data?.MediaContainer?.MediaGrabOperation ?? []
+    // const res: AnyRecord = await $fetch("/api/plex/scheduled");
+    // items.value = res.data?.MediaContainer?.MediaGrabOperation ?? [];
 
-    lastFetch.value = res.lastSuccessfulFetch ?? null
+    // lastFetch.value = res.lastSuccessfulFetch ?? null;
+
+    const res: AnyRecord = await $fetch("/api/plex/cache");
+
+    items.value = res.data?.MediaContainer?.MediaGrabOperation ?? [];
+
+    lastFetch.value = res.lastSuccessfulFetch ?? null;
   } catch (err) {
-    error.value = err
+    error.value = err;
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-})
+});
 </script>
 
 <template>
@@ -205,17 +150,17 @@ onMounted(async () => {
         <v-row dense v-if="!loading && !error">
           <v-col
             v-for="item in timelineEntries"
-            :key="item.type === 'recording'
-              ? item.rec?.id
-              : item.from?.getTime()"
+            :key="
+              item.type === 'recording' ? item.rec?.id : item.from?.getTime()
+            "
             cols="12"
           >
             <!-- AUFNAHME -->
             <v-card
               v-if="item.type === 'recording'"
-              :color="item.skipShutdown
-                ? 'green-lighten-5'
-                : 'yellow-lighten-5'"
+              :color="
+                item.skipShutdown ? 'green-lighten-5' : 'yellow-lighten-5'
+              "
               class="pa-3"
               variant="flat"
             >
@@ -227,52 +172,46 @@ onMounted(async () => {
                 <v-table density="compact">
                   <tbody>
                     <tr>
+                      <th></th>
+                      <th><strong>Start</strong></th>
+                      <th><strong>Ende</strong></th>
+                    </tr>
+                    <tr>
+                      <td><strong>Geräte</strong></td>
+                      <td>{{ format(item.einschaltZeit) }}</td>
+                      <td>{{ format(item.ausschaltZeit) }}</td>
+                    </tr>
+                    <tr>
                       <td><strong>Aufnahme</strong></td>
-                      <td>
-                        {{ format(item.aufnahmeStart) }} –
-                        {{ format_time(item.aufnahmeEnde) }}
-                      </td>
+                      <td>{{ format(item.aufnahmeStart) }}</td>
+                      <td>{{ format(item.aufnahmeEnde) }}</td>
                     </tr>
                     <tr>
                       <td><strong>Sendung</strong></td>
-                      <td>
-                        {{ format_time(item.sendungsStart) }} –
-                        {{ format_time(item.sendungsEnde) }}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td><strong>Einschalten</strong></td>
-                      <td>{{ format(item.einschaltZeit) }}</td>
-                    </tr>
-                    <tr>
-                      <td><strong>Ausschalten</strong></td>
-                      <td>{{ format(item.ausschaltZeit) }}</td>
+                      <td>{{ format(item.sendungsStart) }}</td>
+                      <td>{{ format(item.sendungsEnde) }}</td>
                     </tr>
                     <tr v-if="item.gapMinutes !== null">
-                      <td><strong>Pause</strong></td>
+                      <td><strong>Shutdown</strong></td>
                       <td>
-                        {{ item.gapMinutes }} min →
-                        {{ item.skipShutdown
-                          ? "kein Shutdown"
-                          : "Shutdown folgt" }}
+                        {{
+                          item.skipShutdown
+                            ? "kein Shutdown"
+                            : item.gapMinutes + " Min. Pause"
+                        }}
+                      </td>
+                      <td>
+                        {{ item.skipShutdown ? "-" : format(item.wiederstart) }}
                       </td>
                     </tr>
-                    <tr v-if="item.wiederstart">
-                      <td><strong>Wiederstart</strong></td>
-                      <td>{{ format(item.wiederstart) }}</td>
-                    </tr>
+                    <tr v-if="item.wiederstart"></tr>
                   </tbody>
                 </v-table>
               </v-card-text>
             </v-card>
 
             <!-- SHUTDOWN -->
-            <v-card
-              v-else
-              color="yellow-lighten-4"
-              class="pa-3"
-              variant="flat"
-            >
+            <!--v-card v-else color="yellow-lighten-4" class="pa-3" variant="flat">
               <v-card-title>Shutdown-Periode</v-card-title>
               <v-card-text>
                 <v-table density="compact">
@@ -288,7 +227,7 @@ onMounted(async () => {
                   </tbody>
                 </v-table>
               </v-card-text>
-            </v-card>
+            </v-card-->
           </v-col>
         </v-row>
       </v-card-text>

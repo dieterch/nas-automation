@@ -1,82 +1,119 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue"
+import { ref } from "vue";
+import { useSystemStatus } from "~/composables/useSystemStatus";
 
-const log = ref<string>("")
-const loading = ref<boolean>(false)
+const log = ref("");
+const loading = ref(false);
 
-const nasStatus = ref<any>(null)
-const vuStatus = ref<any>(null)
+const {
+  plexStatus,
+  nasReady,
+  vuPlusReady,
+  update: refreshSystemStatus,
+} = useSystemStatus();
 
 function addLog(msg: string) {
-  log.value =
-    `[${new Date().toLocaleTimeString()}] ${msg}\n` + log.value
+  log.value = `[${new Date().toLocaleTimeString()}] ${msg}\n` + log.value;
 }
 
-async function callApi(path: string, method: string = "GET") {
-  loading.value = true
+type HttpMethod =
+  | "GET"
+  | "POST"
+  | "PUT"
+  | "PATCH"
+  | "DELETE"
+  | "get"
+  | "post"
+  | "put"
+  | "patch"
+  | "delete";
+
+async function callApi(path: string, method: HttpMethod = "GET") {
+  loading.value = true;
   try {
-    const result = await $fetch(path, { method })
-    addLog(`${method} ${path} → ${JSON.stringify(result)}`)
-    return result
+    const result = await $fetch(path, { method });
+    addLog(`${method} ${path} → ${JSON.stringify(result)}`);
+    return result;
   } catch (err: any) {
-    addLog(`${method} ${path} → ERROR ${err?.message ?? err}`)
-    throw err
+    addLog(`${method} ${path} → ERROR ${err?.message ?? err}`);
+    throw err;
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
-/* --------------------------------------------------
-   STATUS
--------------------------------------------------- */
-async function refreshStatus() {
-  nasStatus.value = await callApi("/api/nas/status")
-  vuStatus.value = await callApi("/api/vuplus/status")
-}
+type AlertType = "success" | "info" | "warning" | "error";
 
-/* --------------------------------------------------
-   NAS ACTIONS (MANUAL OVERRIDE)
--------------------------------------------------- */
+const plexAlert = computed<{
+  type: AlertType;
+  text: string;
+} | null>(() => {
+  const s = plexStatus.value;
+  if (!s) return null;
+
+  switch (s.status) {
+    case "green":
+      return { type: "success", text: "ONLINE" };
+    case "yellow":
+      return { type: "info", text: "IM WARTUNGSMODUS" };
+    case "red":
+      return { type: "warning", text: "OFFLINE" };
+    default:
+      return null;
+  }
+});
+
+
+/* ---------------- NAS ACTIONS ---------------- */
+
 async function nasOn() {
-  await callApi("/api/nas/on", "POST")
-  await refreshStatus()
+  await callApi("/api/nas/on", "POST");
+  await refreshSystemStatus();
 }
 
 async function nasOff() {
-  await callApi("/api/nas/off", "POST")
-  await refreshStatus()
+  await callApi("/api/nas/off", "POST");
+  await refreshSystemStatus();
 }
 
 async function nasReboot() {
-  await callApi("/api/nas/reboot", "POST")
-  await refreshStatus()
+  await callApi("/api/nas/reboot", "POST");
+  await refreshSystemStatus();
 }
 
-/* --------------------------------------------------
-   VU+ ACTIONS (MANUAL OVERRIDE)
--------------------------------------------------- */
+/* ---------------- VU+ ACTIONS ---------------- */
+
 async function vuOn() {
-  await callApi("/api/vuplus/on", "POST")
-  await refreshStatus()
+  await callApi("/api/vuplus/on", "POST");
+  await refreshSystemStatus();
 }
 
 async function vuOff() {
-  await callApi("/api/vuplus/off", "POST")
-  await refreshStatus()
+  await callApi("/api/vuplus/off", "POST");
+  await refreshSystemStatus();
 }
-
-/* --------------------------------------------------
-   INIT
--------------------------------------------------- */
-onMounted(() => {
-  refreshStatus()
-})
 </script>
 
 <template>
   <v-container>
     <v-card class="pa-4">
-      <v-card-title>NAS & VU+ – Manuelle Steuerung & Diagnose</v-card-title>
+      <v-card-title>
+        PLEX, NAS & VU+ – Manuelle Steuerung & Diagnose
+      </v-card-title>
+
+      <v-divider class="my-4" />
+
+      <!-- ================= PLEX ================= -->
+      <v-card-subtitle>Plex Status</v-card-subtitle>
+
+      <v-alert
+        v-if="plexAlert"
+        :type="plexAlert.type"
+        density="compact"
+        class="mb-3"
+      >
+        PLEX ist <strong>{{ plexAlert.text }}</strong>
+      </v-alert>
 
       <v-divider class="my-4" />
 
@@ -84,13 +121,11 @@ onMounted(() => {
       <v-card-subtitle>NAS Status</v-card-subtitle>
 
       <v-alert
-        v-if="nasStatus"
-        :type="nasStatus.running ? 'success' : 'warning'"
+        :type="nasReady ? 'success' : 'warning'"
         density="compact"
         class="mb-3"
       >
-        NAS ist <strong>{{ nasStatus.running ? "ONLINE" : "OFFLINE" }}</strong>
-        (IP: {{ nasStatus.ip }})
+        NAS ist <strong>{{ nasReady ? "ONLINE" : "OFFLINE" }}</strong>
       </v-alert>
 
       <v-row class="mb-4">
@@ -119,33 +154,23 @@ onMounted(() => {
       <v-card-subtitle>VU+ Receiver Status</v-card-subtitle>
 
       <v-alert
-        v-if="vuStatus"
-        :type="vuStatus.on ? 'success' : 'warning'"
+        :type="vuPlusReady ? 'success' : 'warning'"
         density="compact"
         class="mb-3"
       >
-        VU+ ist <strong>{{ vuStatus.on ? "EINGESCHALTET" : "AUSGESCHALTET" }}</strong>
+        VU+ ist
+        <strong>{{ vuPlusReady ? "EINGESCHALTET" : "AUSGESCHALTET" }}</strong>
       </v-alert>
 
       <v-row class="mb-4">
         <v-col cols="12" md="6">
-          <v-btn
-            block
-            color="teal"
-            :loading="loading"
-            @click="vuOn"
-          >
+          <v-btn block color="teal" :loading="loading" @click="vuOn">
             VU+ einschalten
           </v-btn>
         </v-col>
 
         <v-col cols="12" md="6">
-          <v-btn
-            block
-            color="deep-orange"
-            :loading="loading"
-            @click="vuOff"
-          >
+          <v-btn block color="deep-orange" :loading="loading" @click="vuOff">
             VU+ ausschalten
           </v-btn>
         </v-col>

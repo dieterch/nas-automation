@@ -2,6 +2,20 @@ import { writeFileSync } from "fs"
 import { resolve } from "path"
 import { loadConfig } from "../utils/config"
 
+type ScheduledPeriod = {
+  _uid?: string
+  [key: string]: unknown
+}
+
+function stripUiFields(config: any) {
+  if (Array.isArray(config.SCHEDULED_ON_PERIODS)) {
+    config.SCHEDULED_ON_PERIODS = config.SCHEDULED_ON_PERIODS.map(
+      ({ _uid, ...rest }: ScheduledPeriod) => rest
+    )
+  }
+  return config
+}
+
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
 
@@ -12,32 +26,27 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const configPath = resolve("server/configuration.json")
-  const backupPath = resolve("server/configuration.json.bak")
+  const configPath = resolve("data/configuration.json")
+  const backupPath = resolve("data/configuration.json.bak")
 
   try {
-    // 1️⃣ bestehende Config laden (Backup)
+    // Backup
     const current = loadConfig()
-    writeFileSync(
-      backupPath,
-      JSON.stringify(current, null, 2),
-      "utf-8"
-    )
+    writeFileSync(backupPath, JSON.stringify(current, null, 2), "utf-8")
 
-    // 2️⃣ neue Config schreiben (formatiert)
+    // 🔥 UI-Felder entfernen
+    const cleanConfig = stripUiFields(body)
+
+    // Write new config
     writeFileSync(
       configPath,
-      JSON.stringify(body, null, 2),
+      JSON.stringify(cleanConfig, null, 2),
       "utf-8"
     )
 
-    return {
-      ok: true,
-      message: "Configuration saved",
-    }
+    return { ok: true }
   } catch (err) {
     console.error("[CONFIG] save failed", err)
-
     throw createError({
       statusCode: 500,
       statusMessage: "Failed to save configuration",

@@ -1,11 +1,7 @@
 <template>
   <v-app>
     <!-- Navigation Drawer -->
-    <v-navigation-drawer
-      v-model="drawer"
-      app
-      width="260"
-    >
+    <v-navigation-drawer v-model="drawer" app width="260">
       <v-list density="comfortable">
         <v-list-item>
           <v-list-item-title class="text-h6">
@@ -15,12 +11,7 @@
 
         <v-divider></v-divider>
 
-        <v-list-item
-          v-for="item in menu"
-          :key="item.to"
-          :to="item.to"
-          link
-        >
+        <v-list-item v-for="item in menu" :key="item.to" :to="item.to" link>
           <v-list-item-title>{{ item.title }}</v-list-item-title>
         </v-list-item>
       </v-list>
@@ -42,6 +33,12 @@
         <v-icon :color="nasColor" size="18">mdi-circle</v-icon>
         <span class="ml-1 text-caption">NAS</span>
       </div>
+
+      <!-- VU+ STATUS -->
+      <div class="d-flex align-center mr-4">
+        <v-icon :color="vuPlusColor" size="18">mdi-circle</v-icon>
+        <span class="ml-1 text-caption">VU+</span>
+      </div>
     </v-app-bar>
 
     <!-- Seiteninhalt -->
@@ -53,27 +50,29 @@
   </v-app>
 </template>
 
-<script setup>
-import { ref, computed } from 'vue'
+<script setup lang="ts">
+import { ref, computed } from "vue";
+import { useSystemStatus } from "~/composables/useSystemStatus";
 
-import { useSystemStatus } from "~/composables/useSystemStatus"
-
-const { plexStatus, nasReady } = useSystemStatus()
+const { plexStatus, nasReady, vuPlusReady } = useSystemStatus();
 
 const plexColor = computed(() => {
-  if (plexStatus.value === "green") return "green"
-  if (plexStatus.value === "yellow") return "yellow"
-  return "red"
-})
-const nasColor  = computed(() => nasReady.value  ? "green" : "red")
+  const s = plexStatus.value?.status;
+  if (s === "green") return "green";
+  if (s === "yellow") return "yellow";
+  return "red";
+});
 
-const drawer = ref(true)
+const nasColor = computed(() => (nasReady.value ? "green" : "red"));
+const vuPlusColor = computed(() => (vuPlusReady.value ? "green" : "red"));
+
+const drawer = ref(true);
 
 const menu = [
   { title: "Dashboard", to: "/" },
   { title: "Aufnahmeplan", to: "/recordings" },
-  // { title: "Automation Regeln", to: "/automation" },
-  { title: "Einstellungen", to: "/settings" },
   { title: "Manual", to: "/manual" },
-]
+  { title: "Einstellungen", to: "/settings" },
+];
 </script>
+

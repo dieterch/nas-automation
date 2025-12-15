@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
-import { useSystemStatus } from "~/composables/useSystemStatus"
+import { ref, onMounted, onUnmounted ,computed } from "vue";
+import { useSystemStatus } from "~/composables/useSystemStatus";
 
-const { plexStatus, nasReady } = useSystemStatus()
+const { plexStatus, nasReady } = useSystemStatus();
 
 const plexColor = computed(() => {
-  if (plexStatus.value === "green") return "green"
-  if (plexStatus.value === "yellow") return "yellow"
-  return "red"
-})
-const nasColor  = computed(() => nasReady.value  ? "green" : "red")
+  if (plexStatus.value?.status === "green") return "green";
+  if (plexStatus.value?.status === "yellow") return "yellow";
+  return "red";
+});
+const nasColor = computed(() => (nasReady.value ? "green" : "red"));
 
 type Any = any;
 
@@ -17,7 +17,7 @@ const loading = ref(true);
 const error = ref<string | null>(null);
 const data = ref<Any | null>(null);
 
-function format(d: string | Date | null) {
+function format(d: string | Date | null | undefined) {
   if (!d) return "–";
   const date = typeof d === "string" ? new Date(d) : d;
   return date.toLocaleString("de-AT", {
@@ -25,18 +25,41 @@ function format(d: string | Date | null) {
     minute: "2-digit",
     day: "2-digit",
     month: "2-digit",
+    year:"numeric"
   });
 }
 
-onMounted(async () => {
+function formatTime(d: string | Date | null | undefined) {
+  if (!d) return "–";
+  const date = typeof d === "string" ? new Date(d) : d;
+  return date.toLocaleString("de-AT", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+let timer: number | undefined;
+
+async function loadStatus() {
   try {
-    loading.value = true;
-    data.value = await $fetch("/api/automation/status");
+    data.value = await $fetch("/api/automation/status", { cache: "no-store" });
   } catch {
     error.value = "Dashboard konnte nicht geladen werden";
   } finally {
     loading.value = false;
   }
+}
+
+onMounted(async () => {
+loadStatus();
+
+  timer = window.setInterval(() => {
+  loadStatus();
+}, 10_000); // 10 Sekunden
+});
+
+onUnmounted(() => {
+  if (timer) clearInterval(timer);
 });
 </script>
 
@@ -58,125 +81,17 @@ onMounted(async () => {
 
     <template v-if="!loading && !error && data">
       <!-- SYSTEM STATUS -->
-      <v-alert
-        class="mb-4"
-        variant="tonal"
-        :type="
-          data.automation.state === 'ERROR'
-            ? 'error'
-            : data.automation.state === 'SHUTTING_DOWN'
-            ? 'warning'
-            : data.automation.state === 'RUNNING'
-            ? 'success'
-            : 'info'
-        "
-      >
-        <strong>{{ data.explanation.title }}</strong
-        ><br />
+      <v-alert class="mb-4" variant="tonal" type="info">
+        <strong>{{ data.explanation.title }}</strong><br />
         {{ data.explanation.description }}
       </v-alert>
-
-      <!-- DEVICES -->
-      <v-row class="mb-4">
-        <v-col cols="12" md="4">
-          <v-card variant="tonal">
-            <v-card-title>NAS</v-card-title>
-            <v-card-text>
-              <v-chip
-                size="small"
-                label
-              >
-                <v-icon :color="nasColor" size="18">mdi-circle</v-icon>
-              </v-chip>
-            </v-card-text>
-          </v-card>
-        </v-col>
-
-        <v-col cols="12" md="4">
-          <v-card variant="tonal">
-            <v-card-title>Vu+</v-card-title>
-            <v-card-text>
-              <v-chip
-                size="small"
-                label
-              >
-              <v-icon v-if="data.devices.vuplus === 'off'" color='red' size="18">mdi-circle</v-icon>
-              <v-icon v-if="data.devices.vuplus === 'on'"color="green" size="18">mdi-circle</v-icon>
-              </v-chip>
-            </v-card-text>
-          </v-card>
-        </v-col>
-
-        <!-- PLEX STATUS -->
-        <v-col cols="12" md="4">
-          <v-card variant="tonal">
-            <v-card-title>Plex</v-card-title>
-            <v-card-text>
-              <v-chip size="small" label>
-                <v-icon :color="plexColor" size="18">mdi-circle</v-icon>
-              </v-chip>
-            </v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
 
       <!-- ACTIVE WINDOW -->
       <v-card v-if="data.activeWindow" variant="tonal" class="mb-4">
         <v-card-title>Aktives Zeitfenster</v-card-title>
         <v-card-text>
-          <strong>{{ data.activeWindow.label }}</strong
-          ><br />
+          <strong>{{ data.activeWindow.label }}</strong><br />
           {{ data.activeWindow.start }} – {{ data.activeWindow.end }}
-        </v-card-text>
-      </v-card>
-
-      <!-- STATUS -->
-      <v-card variant="tonal" class="mb-4">
-        <v-card-title>Status</v-card-title>
-        <v-card-text>
-          <v-table density="compact">
-            <tbody>
-              <tr>
-                <td><strong>Automation State</strong></td>
-                <td>
-                  <v-chip
-                    size="small"
-                    label
-                    :color="
-                      data.automation.state === 'RUNNING'
-                        ? 'green'
-                        : data.automation.state === 'STARTING'
-                        ? 'blue'
-                        : data.automation.state === 'SHUTTING_DOWN'
-                        ? 'orange'
-                        : data.automation.state === 'ERROR'
-                        ? 'red'
-                        : data.automation.state === 'DRY_RUN'
-                        ? 'brown'
-                        : 'grey'
-                    "
-                  >
-                    {{ data.automation.state }}
-                  </v-chip>
-                </td>
-              </tr>
-
-              <tr>
-                <td><strong>Seit</strong></td>
-                <td>{{ format(data.automation.since) }}</td>
-              </tr>
-
-              <tr>
-                <td><strong>Letzte Decision</strong></td>
-                <td>{{ data.automation.lastDecision ?? "–" }}</td>
-              </tr>
-
-              <tr>
-                <td><strong>Grund (intern)</strong></td>
-                <td>{{ data.automation.reason ?? "–" }}</td>
-              </tr>
-            </tbody>
-          </v-table>
         </v-card-text>
       </v-card>
 
@@ -184,47 +99,62 @@ onMounted(async () => {
       <v-card variant="tonal" class="mb-4">
         <v-card-title>Nächstes Ereignis</v-card-title>
         <v-card-text>
+          <!-- IDLE -->
           <v-alert
-            v-if="data.nextEvent?.type === 'none'"
+            v-if="data.nextEvent.type === 'IDLE'"
             type="info"
             density="compact"
           >
-            Kein kommendes Ereignis
+            Kein aktuelles oder kommendes Aufnahmeereignis
           </v-alert>
 
-          <v-table v-else density="compact">
-            <tbody>
-              <tr>
-                <td><strong>Titel</strong></td>
-                <td>{{ data.nextEvent.title }}</td>
-              </tr>
-              <tr>
-                <td><strong>Einschalten</strong></td>
-                <td>{{ format(data.nextEvent.einschaltZeit) }}</td>
-              </tr>
-              <tr>
-                <td><strong>Aufnahme</strong></td>
-                <td>
-                  {{ format(data.nextEvent.aufnahmeStart) }} –
-                  {{ format(data.nextEvent.aufnahmeEnde) }}
-                </td>
-              </tr>
-            </tbody>
-          </v-table>
+          <!-- RECORDING RUNNING -->
+          <template v-else-if="data.nextEvent.type === 'RECORDING_RUNNING'">
+            <v-alert type="success" density="compact" class="mb-2">
+              {{ data.nextEvent.count }} Aufnahme<span
+                v-if="data.nextEvent.count > 1"
+                >n</span
+              >
+              laufen gerade
+            </v-alert>
+
+            <v-table density="compact">
+              <tbody>
+                <tr
+                  v-for="(r, i) in data.nextEvent.recordings"
+                  :key="i"
+                >
+                  <td>{{ r.title }}</td>
+                  <td class="text-right">
+                    {{ formatTime(r.from) }} – {{ formatTime(r.to) }}
+                  </td>
+                </tr>
+              </tbody>
+            </v-table>
+          </template>
+
+          <!-- RECORDING START -->
+          <v-alert
+            v-else-if="data.nextEvent.type === 'RECORDING_START'"
+            type="info"
+            density="compact"
+          >
+            Nächste Aufnahme beginnt am
+            <strong>{{ format(data.nextEvent.at) }}</strong
+            ><br />
+            {{ data.nextEvent.title }}
+          </v-alert>
+
+          <!-- RECORDING END -->
+          <v-alert
+            v-else-if="data.nextEvent.type === 'RECORDING_END'"
+            type="warning"
+            density="compact"
+          >
+            Aufnahmen im Nachlauf ({{ data.nextEvent.count }})
+          </v-alert>
         </v-card-text>
       </v-card>
-
-      <!-- QUICK ACTIONS -->
-      <v-row>
-        <v-col cols="12" md="6">
-          <v-btn block color="primary" to="/automation">
-            Details / Automation
-          </v-btn>
-        </v-col>
-        <v-col cols="12" md="6">
-          <v-btn block color="secondary" to="/settings"> Einstellungen </v-btn>
-        </v-col>
-      </v-row>
     </template>
   </v-container>
 </template>
