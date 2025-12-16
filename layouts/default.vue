@@ -73,6 +73,7 @@ const menu = [
   { title: "Aufnahmeplan", to: "/recordings" },
   { title: "Manual", to: "/manual" },
   { title: "Einstellungen", to: "/settings" },
+  { title: "Debug", to: "/debug" },
 ];
 </script>
 

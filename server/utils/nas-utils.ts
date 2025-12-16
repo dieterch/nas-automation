@@ -108,9 +108,13 @@ export async function sshShutdown() {
     `ssh -o StrictHostKeyChecking=no -p ${NAS_SSH_PORT} ${NAS_SSH_USER}@${NAS_IP} "${shutdownCmd}"`
 
   try {
-    await execAsync(cmd)
+    if (await isNasOnlineByPort()) {
+      await execAsync(cmd)
+    } else {
+      console.log("[NAS-UTILS] NAS SSH port not online.")
+    }
   } catch (err) {
-    console.error("SSH poweroff failed:", err)
+    console.error("[NAS-UTILS] SSH poweroff failed:", err)
   }
 }
 
@@ -144,7 +148,7 @@ export async function sshReboot() {
   try {
     await execAsync(cmd)
   } catch (err) {
-    console.error("SSH reboot failed:", err)
+    console.error("[NAS-UTILS] SSH reboot failed:", err)
   }
 }
 
@@ -172,15 +176,15 @@ export async function waitForNasShutdown(timeoutMs = 180_000) {
     const running = await isNasRunning()
 
     if (!running) {
-      console.log("NAS is now OFF")
+      console.log("[NAS-UTILS] NAS is now OFF")
       return true
     }
 
-    console.log("NAS still running … checking again in 20s")
+    console.log("[NAS-UTILS] NAS still running … checking again in 20s")
     await sleep(20_000)
   }
 
-  console.log("NAS did NOT shut down in time")
+  console.log("[NAS-UTILS] NAS did NOT shut down in time")
   return false
 }
 
@@ -201,18 +205,18 @@ export async function waitForPlexReady(timeoutMs = 180_000) {
       })
 
       if (result?.MediaContainer) {
-        console.log("[NAS-UTIL] Plex is READY")
+        console.log("[NAS-UTILS] Plex is READY")
         return true
       }
     } catch (err) {
       // Plex ist noch nicht bereit
     }
 
-    console.log("Waiting for Plex API…")
-    await sleep(5000)
+    console.log("[NAS-UTILS] Waiting for Plex API…")
+    await sleep(20000)
   }
 
-  console.log("Plex did NOT get ready in time!")
+  console.log("[NAS-UTILS] Plex did NOT get ready in time!")
   return false
 }
 
@@ -222,12 +226,12 @@ export async function startNasSafe() {
   await sleep(1000)
   await NASshellyOn()
 
-  console.log("Waiting for NAS to come online…")
+  console.log("[NAS-UTILS] Waiting for NAS to come online…")
   const booted = await waitForNasOnline()
 
   if (!booted) return false
 
-  console.log("NAS is online, waiting for Plex to be ready…")
+  console.log("[NAS-UTILS] NAS is online, waiting for Plex to be ready…")
   return await waitForPlexReady()
 }
 
@@ -255,14 +259,14 @@ export async function NASshellyOnIfNasOff() {
 
   // NAS läuft → kein Einschalten notwendig
   if (nasOnline) {
-    console.log("Shelly: NAS läuft bereits – kein Einschalten.")
+    console.log("[NAS-UTILS] Shelly: NAS läuft bereits – kein Einschalten.")
     return { success: false, reason: "nas-online" }
   } else {
-    console.log("Shelly: NAS ist offline – Einschalten freigegeben.")
+    console.log("[NAS-UTILS] Shelly: NAS ist offline – Einschalten freigegeben.")
   }
 
   await NASshellyOn()
-  console.log("Shelly: NAS wurde eingeschaltet.")
+  console.log("[NAS-UTILS] Shelly: NAS wurde eingeschaltet.")
   return { success: true }
 }
 
@@ -271,13 +275,13 @@ export async function NASshellyOffIfNasOff() {
 
   // NAS läuft → auf keinen Fall ausschalten!
   if (nasOnline) {
-    console.log("Shelly: NAS ist online – Ausschalten blockiert.")
+    console.log("[NAS-UTILS] Shelly: NAS ist online – Ausschalten blockiert.")
     return { success: false, reason: "nas-online" }
   } else {
-    console.log("Shelly: NAS ist offline – Ausschalten freigegeben.")
+    console.log("[NAS-UTILS] Shelly: NAS ist offline – Ausschalten freigegeben.")
   }
 
   await NASshellyOff()
-  console.log("Shelly: NAS wurde ausgeschaltet.")
+  console.log("[NAS-UTILS] Shelly: NAS wurde ausgeschaltet.")
   return { success: true }
 }

@@ -1,3 +1,7 @@
+/* ******************************************
+schaufelt alle REC_SCHEDULE_INTERVAL Sekunden
+die Aufnahmen vom plex-API in den cache
+******************************************* */
 import { loadConfig } from "~/server/utils/config"
 import { isNasOnlineByPort } from "~/server/utils/nas-utils"
 

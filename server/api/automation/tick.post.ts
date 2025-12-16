@@ -1,3 +1,7 @@
+/* ***************************
+wird mit REC_SCHEDULE_INTERVAL von automation-ticks.ts
+aufgerufen, stellt die Abarbeitung der Aufnahmen sicher
+****************************** */
 import { runAutomationDryRun } from "../../utils/automation"
 import { readPlexCache } from "../../utils/plex-cache"
 
@@ -13,7 +17,7 @@ export default defineEventHandler(async () => {
     }
   }
 
-  const result = await runAutomationDryRun(schedule)
+  const result:any = await runAutomationDryRun(schedule)
 
   return {
     ok: true,

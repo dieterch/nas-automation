@@ -18,20 +18,24 @@ export default defineEventHandler(async () => {
     isVuPlusOn(),
   ]);
 
-  const REASON_MAP: Record<string, string> = {
-    "recording active": "Es läuft gerade eine Aufnahme.",
-    "approaching recording": "Eine Aufnahme steht kurz bevor.",
-    "within grace period":
-      "Zwischen zwei Aufnahmen liegt nur eine kurze Pause.",
-    "forced on window": "Geplantes Zeitfenster (z. B. Proxmox-Backup).",
-    "proxmox backup running": "Ein Proxmox-Backup läuft.",
-    "no recordings": "Keine geplanten Aufnahmen.",
-    "no future recordings": "Keine weiteren Aufnahmen geplant.",
-    "manual shutdown via API": "Manuell über die Oberfläche ausgelöst.",
-  };
+  // const REASON_MAP: Record<string, string> = {
+  //   "recording active": "Es läuft gerade eine Aufnahme.",
+  //   "approaching recording": "Eine Aufnahme steht kurz bevor.",
+  //   "within grace period":
+  //     "Zwischen zwei Aufnahmen liegt nur eine kurze Pause.",
+  //   "forced on window": "Geplantes Zeitfenster (z. B. Proxmox-Backup).",
+  //   "proxmox backup running": "Ein Proxmox-Backup läuft.",
+  //   "no recordings": "Keine geplanten Aufnahmen.",
+  //   "no future recordings": "Keine weiteren Aufnahmen geplant.",
+  //   "manual shutdown via API": "Manuell über die Oberfläche ausgelöst.",
+  // };
 
   function explainTitle(state: any) {
     switch (state.lastDecision) {
+      case "START_NAS":
+        return "NAS wird manuell gestartet."
+      case "START_VUPLUS":
+        return "VU+ wird eingeschaltet";
       case "KEEP_RUNNING":
         return "System bleibt aktiv";
       case "START_REQUIRED_DEVICES":

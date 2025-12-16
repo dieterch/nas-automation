@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { config } from "node:process";
 import { ref, onMounted, onUnmounted ,computed } from "vue";
+import type { v } from "vue-router/dist/router-CWoNjPRp.mjs";
 import { useSystemStatus } from "~/composables/useSystemStatus";
 
 const { plexStatus, nasReady } = useSystemStatus();
@@ -16,6 +18,8 @@ type Any = any;
 const loading = ref(true);
 const error = ref<string | null>(null);
 const data = ref<Any | null>(null);
+const cfg = ref({});
+const status = ref({});
 
 function format(d: string | Date | null | undefined) {
   if (!d) return "–";
@@ -43,6 +47,8 @@ let timer: number | undefined;
 async function loadStatus() {
   try {
     data.value = await $fetch("/api/automation/status", { cache: "no-store" });
+    cfg.value = await $fetch("/api/config", { cache: "no-store" });
+    status.value = await $fetch("/api/automation/status", { cache: "no-store" });
   } catch {
     error.value = "Dashboard konnte nicht geladen werden";
   } finally {
@@ -153,6 +159,15 @@ onUnmounted(() => {
           >
             Aufnahmen im Nachlauf ({{ data.nextEvent.count }})
           </v-alert>
+        </v-card-text>
+      </v-card>
+      <v-card>
+        <v-card-text>
+          <pre>
+{{ new Date() }}
+{{ cfg.SCHEDULED_ON_PERIODS }}
+{{ status }}
+          </pre>
         </v-card-text>
       </v-card>
     </template>

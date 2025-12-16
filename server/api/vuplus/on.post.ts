@@ -1,6 +1,14 @@
-import { VUshellyOn } from "../../utils/nas-utils"
+import { applyDecision } from "../../utils/automation-machine";
 
 export default defineEventHandler(async () => {
-  await VUshellyOn()
-  return { ok: true }
+  // Manuelles Einschalten erzwingen
+  applyDecision("START_VUPLUS", "manual start via API");
+
+  // 2️⃣ Automation danach neu evaluieren
+  await $fetch("/api/automation/tick", { method: "POST" });
+
+  return {
+    ok: true,
+    action: "START_VUPLUS",
+  };
 })
