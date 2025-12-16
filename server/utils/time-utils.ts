@@ -41,6 +41,7 @@ export function isNowInScheduledPeriod(
 
 type ScheduledPeriod =
   | {
+      id: string;
       enabled?: boolean;
       type: "daily";
       start: string;
@@ -48,6 +49,7 @@ type ScheduledPeriod =
       label?: string;
     }
   | {
+      id: string;
       enabled?: boolean;
       type: "weekly";
       days: number[]; // 0=So … 6=Sa
@@ -56,6 +58,7 @@ type ScheduledPeriod =
       label?: string;
     }
   | {
+      id: string;  
       enabled?: boolean;
       type: "once";
       date: string; // YYYY-MM-DD
@@ -69,12 +72,13 @@ export function getActiveScheduledWindow(
   periods: ScheduledPeriod[] = []
 ) {
   for (const p of periods) {
-    if (!p || !p.type || !p.start || !p.end) continue;
+    if (!p || !p.id || !p.type || !p.start || !p.end) continue;
     if (p.enabled === false) continue;
 
     if (p.type === "daily") {
       if (isNowInTimeRange(now, p.start, p.end)) {
         return {
+          id: p.id,
           type: "daily",
           start: p.start,
           end: p.end,
@@ -90,6 +94,7 @@ export function getActiveScheduledWindow(
         isNowInTimeRange(now, p.start, p.end)
       ) {
         return {
+          id: p.id,
           type: "weekly",
           start: p.start,
           end: p.end,
@@ -102,6 +107,7 @@ export function getActiveScheduledWindow(
       const today = now.toISOString().slice(0, 10);
       if (today === p.date && isNowInTimeRange(now, p.start, p.end)) {
         return {
+          id: p.id,
           type: "once",
           start: p.start,
           end: p.end,

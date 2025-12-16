@@ -96,7 +96,8 @@ onUnmounted(() => {
       <v-card v-if="data.activeWindow" variant="tonal" class="mb-4">
         <v-card-title>Aktives Zeitfenster</v-card-title>
         <v-card-text>
-          <strong>{{ data.activeWindow.label }}</strong><br />
+          <strong>{{ data.activeWindow.label }}</strong>
+          {{ data.activeWindow.id }}<br />
           {{ data.activeWindow.start }} – {{ data.activeWindow.end }}
         </v-card-text>
       </v-card>
