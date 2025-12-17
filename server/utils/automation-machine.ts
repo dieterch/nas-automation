@@ -65,28 +65,38 @@ export async function applyDecision(decision: Decision, reason: string) {
       case "START_REQUIRED_DEVICES":
         saveState("STARTING", decision, reason);
 
-        if (cfg.SHELLY?.NAS?.enabled) {
+        const nasOnline = await isNasOnlineByPort();
+
+        if (!nasOnline && cfg.SHELLY?.NAS?.enabled) {
           await NASshellyOnIfNasOff();
         }
+
         if (cfg.SHELLY?.VUPLUS?.enabled) {
           await VUshellyOn();
         }
-
-        saveState("RUNNING", decision, "devices started");
         break;
 
       /* ---------------- KEEP RUNNING ---------------- */
       case "KEEP_RUNNING":
-        // absichtlich KEIN saveState
-        // RUNNING bleibt RUNNING
+        saveState("RUNNING", decision, reason);
+        // KEINE ACTION → korrekt
         break;
 
       /* ---------------- SHUTDOWN NAS (DAY) ---------------- */
-      case "SHUTDOWN_NAS":
+      case "SHUTDOWN_NAS": {
+        const nasOnline = await isNasOnlineByPort();
+
+        if (!nasOnline) {
+          // 👉 HIER ist der fehlende Exit
+          saveState("IDLE", "NO_ACTION", "nas already off");
+          return;
+        }
+
         saveState("SHUTTING_DOWN", decision, reason);
         await shutDownNas();
         saveState("IDLE", decision, "nas shut down");
         break;
+      }
 
       /* ---------------- SHUTDOWN ALL (NIGHT) ---------------- */
       case "SHUTDOWN_ALL":
@@ -113,6 +123,10 @@ export async function applyDecision(decision: Decision, reason: string) {
     }
   } catch (err) {
     console.error("[AUTOMATION][MACHINE] action failed", err);
-    saveState("ERROR", "ERROR_REQUIRED_DEVICE", "exception during automation action");
+    saveState(
+      "ERROR",
+      "ERROR_REQUIRED_DEVICE",
+      "exception during automation action"
+    );
   }
 }

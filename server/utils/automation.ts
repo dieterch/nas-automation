@@ -39,22 +39,29 @@ export async function runAutomationDryRun(schedule: any) {
   const config = loadConfig();
   const now = new Date();
 
-  /* 0) Absolute Priorität */
-  if (await isProxmoxBackupRunning()) {
-    return decide("KEEP_RUNNING", "proxmox backup running");
-  }
-
-  /* 1) Scheduled ON */
-  const scheduled = isNowInScheduledPeriod(now, config.SCHEDULED_ON_PERIODS);
-  if (scheduled.active) {
-    return decide("KEEP_RUNNING", scheduled.reason ?? "scheduled on window");
-  }
-
+  // /* 0) Absolute Priorität */ funktioniert noch nicht => workaround manuelles fixes Zeitfenster 
+  // if (await isProxmoxBackupRunning()) {
+  //   return decide("KEEP_RUNNING", "proxmox backup running");
+  // }
+  
   const inNightPeriod = isNowInNightPeriod(now, config.NIGHT_PERIOD);
   const [nasOnline, vuOn] = await Promise.all([
     isNasOnlineByPort(),
     isVuPlusOn(),
   ]);
+  
+  /* 1) Scheduled ON */
+  const scheduled = isNowInScheduledPeriod(now, config.SCHEDULED_ON_PERIODS);
+  if (scheduled.active) {
+    if (!nasOnline || !vuOn) {
+      return decide(
+        "START_REQUIRED_DEVICES",
+        scheduled.reason ?? "scheduled on window"
+      );
+    }
+    return decide("KEEP_RUNNING", scheduled.reason ?? "scheduled on window");
+  }
+
 
   /* 2) Recordings */
   const raw = schedule?.data?.MediaContainer?.MediaGrabOperation ?? [];
@@ -69,22 +76,26 @@ export async function runAutomationDryRun(schedule: any) {
   const decisionResult = computeAutomationDecision(recordings, now, config);
 
   switch (decisionResult.decision) {
-    case "KEEP_RUNNING":
+
+    case "KEEP_RUNNING": {
       if (!nasOnline || !vuOn) {
         return decide("START_REQUIRED_DEVICES", decisionResult.reason);
       }
+
+      // Geräte laufen → Zustand sauber halten
       return decide("KEEP_RUNNING", decisionResult.reason);
+    }
 
     case "NO_ACTION":
-      if (nasOnline || vuOn) {
-        return inNightPeriod
-          ? decide("SHUTDOWN_ALL", "idle (night)")
-          : decide("SHUTDOWN_NAS", "idle (day)");
+      if ( nasOnline ) {
+        decide("SHUTDOWN_NAS", "idle (day)");
+      }
+      if ( vuOn && inNightPeriod ) {
+        decide("SHUTDOWN_ALL", "idle (night)")
       }
       return decide("NO_ACTION", "idle");
   }
 }
-
 
 /* ------------------------------------------------------------------
    DECISION HOOK

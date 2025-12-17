@@ -19,19 +19,19 @@ export function isNowInScheduledPeriod(
       end <= start ? now >= start || now <= end : now >= start && now <= end;
 
     if (p.type === "daily" && inRange) {
-      return { active: true, reason: "daily window" };
+      return { active: true, reason: "daily window " + p.id };
     }
 
     if (p.type === "weekly") {
       if (now.getDay() === p.weekday && inRange) {
-        return { active: true, reason: "weekly window" };
+        return { active: true, reason: "weekly window " + p.id };
       }
     }
 
     if (p.type === "once") {
       const today = now.toISOString().slice(0, 10);
       if (today === p.date && inRange) {
-        return { active: true, reason: "one-time window" };
+        return { active: true, reason: "one-time window " + p.id };
       }
     }
   }

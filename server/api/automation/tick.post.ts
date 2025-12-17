@@ -43,6 +43,9 @@ export default defineEventHandler(async () => {
     result.reason
   )
 
+  // console.log(`[AUTOMATION][TICK-POST] state=${JSON.stringify(state)}`)
+  // console.log(`[AUTOMATION][TICK-POST] result=${JSON.stringify(result)}`)
+
   return {
     ok: true,
     decision: result.decision,
