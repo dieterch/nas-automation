@@ -19,6 +19,7 @@ const DEFAULT_STATE: AutomationState = "INIT"
 
 export interface AutomationStateFile {
   state: AutomationState
+  lastTickAt: string
   since: string
   lastDecision?: string
   reason?: string
@@ -26,26 +27,34 @@ export interface AutomationStateFile {
 
 export function loadState(): AutomationStateFile {
   if (!existsSync(STATE_FILE)) {
+    const now = new Date().toISOString()
     return {
       state: "IDLE",
-      since: new Date().toISOString(),
+      since: now,
+      lastTickAt: now,
     }
   }
 
   return JSON.parse(readFileSync(STATE_FILE, "utf-8"))
 }
 
+
 export function saveState(
-  state: AutomationState,
+  newState: AutomationState,
   decision: string,
   reason: string
 ) {
+  const prev = loadState()
+  const now = new Date().toISOString()
+
   const entry: AutomationStateFile = {
-    state,
-    since: new Date().toISOString(),
+    state: newState,
+    lastTickAt: now,
+    since: prev.state === newState ? prev.since : now,
     lastDecision: decision,
     reason,
   }
 
   writeFileSync(STATE_FILE, JSON.stringify(entry, null, 2))
 }
+

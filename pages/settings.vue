@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted } from "vue"
 
 /* ================= TYPES ================= */
 
@@ -18,19 +18,28 @@ interface Config {
   VORLAUF_AUFWACHEN_MIN: number
   AUSSCHALT_NACHLAUF_MIN: number
   GRACE_PERIOD_MIN: number
+
+  TICK_INTERVAL_SEC: number
   REC_SCHEDULE_INTERVALL: number
+
   AUTOMATION_ACTIONS_ENABLED: boolean
+
   NIGHT_PERIOD: {
     enabled: boolean
     start: string
     end: string
   }
+
   SCHEDULED_ON_PERIODS: ScheduledPeriod[]
+
   SHELLY: {
     NAS: { enabled: boolean }
     VUPLUS: { enabled: boolean }
   }
-  PROXMOX: { enabled: boolean }
+
+  PROXMOX: {
+    enabled: boolean
+  }
 }
 
 /* ================= STATE ================= */
@@ -56,7 +65,7 @@ function makeUid(): string {
 function normalizeSchedules() {
   if (!config.value) return
   config.value.SCHEDULED_ON_PERIODS =
-    config.value.SCHEDULED_ON_PERIODS.map((p) => ({
+    config.value.SCHEDULED_ON_PERIODS.map(p => ({
       ...p,
       _uid: p._uid ?? makeUid(),
     }))
@@ -66,8 +75,8 @@ function normalizeSchedules() {
 
 onMounted(async () => {
   resetMessages()
+  loading.value = true
   try {
-    loading.value = true
     const data = await $fetch<Config>("/api/config")
     config.value = data
     normalizeSchedules()
@@ -99,7 +108,7 @@ async function saveConfig() {
   }
 }
 
-/* ================= ACTIONS ================= */
+/* ================= SCHEDULE ACTIONS ================= */
 
 function addScheduledPeriod() {
   if (!config.value) return
@@ -144,13 +153,25 @@ function removeScheduledPeriod(uid: string) {
             <v-card-text>
               <v-row>
                 <v-col cols="12" md="4">
-                  <v-text-field v-model.number="config.VORLAUF_AUFWACHEN_MIN" label="Vorlauf Aufwachen (Min)" type="number"/>
+                  <v-text-field
+                    v-model.number="config.VORLAUF_AUFWACHEN_MIN"
+                    label="Vorlauf Aufwachen (Min)"
+                    type="number"
+                  />
                 </v-col>
                 <v-col cols="12" md="4">
-                  <v-text-field v-model.number="config.AUSSCHALT_NACHLAUF_MIN" label="Ausschalt-Nachlauf (Min)" type="number"/>
+                  <v-text-field
+                    v-model.number="config.AUSSCHALT_NACHLAUF_MIN"
+                    label="Ausschalt-Nachlauf (Min)"
+                    type="number"
+                  />
                 </v-col>
                 <v-col cols="12" md="4">
-                  <v-text-field v-model.number="config.GRACE_PERIOD_MIN" label="Grace Period (Min)" type="number"/>
+                  <v-text-field
+                    v-model.number="config.GRACE_PERIOD_MIN"
+                    label="Grace Period (Min)"
+                    type="number"
+                  />
                 </v-col>
               </v-row>
             </v-card-text>
@@ -161,11 +182,55 @@ function removeScheduledPeriod(uid: string) {
             <v-card-title>Automation</v-card-title>
             <v-card-text>
               <v-row>
+                <v-col cols="12" md="4">
+                  <v-text-field
+                    v-model.number="config.TICK_INTERVAL_SEC"
+                    label="Tick-Intervall (Sekunden)"
+                    type="number"
+                  />
+                </v-col>
+                <v-col cols="12" md="4">
+                  <v-text-field
+                    v-model.number="config.REC_SCHEDULE_INTERVALL"
+                    label="Plex-Refresh (Sekunden)"
+                    type="number"
+                  />
+                </v-col>
+                <v-col cols="12" md="4">
+                  <v-switch
+                    v-model="config.AUTOMATION_ACTIONS_ENABLED"
+                    label="Automation aktiv"
+                    inset
+                  />
+                </v-col>
+              </v-row>
+            </v-card-text>
+          </v-card>
+
+          <!-- ================= NIGHT PERIOD ================= -->
+          <v-card variant="tonal" class="mb-4">
+            <v-card-title>Nachtperiode</v-card-title>
+            <v-card-text>
+              <v-switch
+                v-model="config.NIGHT_PERIOD.enabled"
+                label="Nachtmodus aktiv"
+                inset
+                class="mb-4"
+              />
+              <v-row v-if="config.NIGHT_PERIOD.enabled">
                 <v-col cols="12" md="6">
-                  <v-text-field v-model.number="config.REC_SCHEDULE_INTERVALL" label="Automation-Intervall (Sekunden)" type="number"/>
+                  <v-text-field
+                    v-model="config.NIGHT_PERIOD.start"
+                    label="Start (HH:MM)"
+                    type="time"
+                  />
                 </v-col>
                 <v-col cols="12" md="6">
-                  <v-switch v-model="config.AUTOMATION_ACTIONS_ENABLED" label="Automation scharf schalten" inset/>
+                  <v-text-field
+                    v-model="config.NIGHT_PERIOD.end"
+                    label="Ende (HH:MM)"
+                    type="time"
+                  />
                 </v-col>
               </v-row>
             </v-card-text>
@@ -184,25 +249,48 @@ function removeScheduledPeriod(uid: string) {
               >
                 <v-card-text>
 
-                  <!-- ID -->
-                  <v-text-field v-model="p.id" label="ID" class="mb-3"/>
+                  <v-text-field
+                    v-model="p.id"
+                    label="ID"
+                    class="mb-3"
+                  />
 
-                  <!-- BASIS -->
                   <v-row>
                     <v-col cols="12" md="2">
-                      <v-switch v-model="p.active" label="Aktiv" inset/>
+                      <v-switch v-model="p.active" label="Aktiv" inset />
                     </v-col>
+
                     <v-col cols="12" md="3">
-                      <v-select v-model="p.type" :items="['daily','weekly','once']" label="Typ"/>
+                      <v-select
+                        v-model="p.type"
+                        label="Typ"
+                        :items="['daily','weekly','once']"
+                      />
                     </v-col>
+
                     <v-col cols="6" md="2">
-                      <v-text-field v-model="p.start" type="time" label="Start"/>
+                      <v-text-field
+                        v-model="p.start"
+                        type="time"
+                        label="Start"
+                      />
                     </v-col>
+
                     <v-col cols="6" md="2">
-                      <v-text-field v-model="p.end" type="time" label="Ende"/>
+                      <v-text-field
+                        v-model="p.end"
+                        type="time"
+                        label="Ende"
+                      />
                     </v-col>
+
                     <v-col cols="12" md="1">
-                      <v-btn icon="mdi-delete" color="red" variant="text" @click="removeScheduledPeriod(p._uid)"/>
+                      <v-btn
+                        icon="mdi-delete"
+                        color="red"
+                        variant="text"
+                        @click="removeScheduledPeriod(p._uid)"
+                      />
                     </v-col>
                   </v-row>
 
@@ -229,7 +317,11 @@ function removeScheduledPeriod(uid: string) {
                   <!-- ONCE -->
                   <v-row v-if="p.type === 'once'">
                     <v-col cols="12" md="4">
-                      <v-text-field v-model="p.date" type="date" label="Datum"/>
+                      <v-text-field
+                        v-model="p.date"
+                        type="date"
+                        label="Datum"
+                      />
                     </v-col>
                   </v-row>
 

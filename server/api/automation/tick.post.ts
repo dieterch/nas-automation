@@ -1,16 +1,34 @@
-/* ***************************
-wird mit REC_SCHEDULE_INTERVAL von automation-ticks.ts
-aufgerufen, stellt die Abarbeitung der Aufnahmen sicher
-****************************** */
-import { runAutomationDryRun } from "../../utils/automation"
+// server/api/automation/tick.post.ts
+
+import { loadConfig } from "../../utils/config"
+import { loadState, saveState } from "../../utils/automation-state"
 import { readPlexCache } from "../../utils/plex-cache"
+import { runAutomationDryRun } from "../../utils/automation"
 
 export default defineEventHandler(async () => {
-  console.log("[AUTOMATION][TICK-POST] triggered")
+  const cfg = loadConfig()
+  const state = loadState()
+
+  const now = Date.now()
+  const lastTick = state.lastTickAt
+    ? Date.parse(state.lastTickAt)
+    : 0
+
+  const intervalMs = (cfg.TICK_INTERVAL_SEC ?? 60) * 1000
+
+  if (now - lastTick < intervalMs) {
+    return {
+      ok: true,
+      skipped: true,
+      reason: "tick throttled",
+      nextInSec: Math.ceil((intervalMs - (now - lastTick)) / 1000),
+    }
+  }
 
   const schedule = await readPlexCache()
 
-  if (!schedule) {
+  if (!schedule?.data) {
+    saveState(state.state, "NO_ACTION", "no plex cache")
     return {
       ok: false,
       error: "no_schedule_cache",
@@ -18,6 +36,12 @@ export default defineEventHandler(async () => {
   }
 
   const result:any = await runAutomationDryRun(schedule)
+
+  saveState(
+    state.state,
+    result.decision,
+    result.reason
+  )
 
   return {
     ok: true,

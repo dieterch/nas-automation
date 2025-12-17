@@ -46,112 +46,49 @@ export async function applyDecision(decision: Decision, reason: string) {
   const cfg = loadConfig();
   const actionsEnabled = cfg.AUTOMATION_ACTIONS_ENABLED === true;
 
-  /* --------------------------------------------------------------
-     GLOBAL LOGGING (immer)
-  -------------------------------------------------------------- */
   logAutomation({ decision, reason });
+
   console.log(
     `[AUTOMATION][MACHINE] decision=${decision} reason="${reason}" actionsEnabled=${actionsEnabled}`
   );
 
   /* --------------------------------------------------------------
-     DRY RUN MODE
+     DRY RUN MODE (kein State-Wechsel!)
   -------------------------------------------------------------- */
   if (!actionsEnabled) {
-    // State nur setzen, wenn relevant
-    if (decision !== "NO_ACTION") {
-      saveState("DRY_RUN", decision, reason);
-    }
     return;
   }
 
-  /* --------------------------------------------------------------
-     REAL ACTIONS
-  -------------------------------------------------------------- */
   try {
     switch (decision) {
-      /* ----------------------------------------------------------
-         START NAS // for manual operation
-      ---------------------------------------------------------- */
-      case "START_NAS":
+      /* ---------------- START REQUIRED DEVICES ---------------- */
+      case "START_REQUIRED_DEVICES":
         saveState("STARTING", decision, reason);
 
         if (cfg.SHELLY?.NAS?.enabled) {
           await NASshellyOnIfNasOff();
         }
-        break;
-
-      /* ----------------------------------------------------------
-         START VUPLUS // for manual operation
-      ---------------------------------------------------------- */
-      case "START_VUPLUS":
-        saveState("STARTING", decision, reason);
-
         if (cfg.SHELLY?.VUPLUS?.enabled) {
           await VUshellyOn();
         }
+
+        saveState("RUNNING", decision, "devices started");
         break;
 
-      /* ----------------------------------------------------------
-         START REQUIRED DEVICES
-      ---------------------------------------------------------- */
-      case "START_REQUIRED_DEVICES":
-        saveState("STARTING", decision, reason);
-
-        if (!(await isNasOnlineByPort())) {
-          if (cfg.SHELLY?.NAS?.enabled) {
-            await NASshellyOnIfNasOff();
-          }
-  
-          if (cfg.SHELLY?.VUPLUS?.enabled) {
-            await VUshellyOn();
-          }
-        }
-        break;
-
-      /* ----------------------------------------------------------
-         KEEP RUNNING
-      ---------------------------------------------------------- */
+      /* ---------------- KEEP RUNNING ---------------- */
       case "KEEP_RUNNING":
-        saveState("RUNNING", decision, reason);
-
-        if (!(await isNasOnlineByPort())) {
-          if (cfg.SHELLY?.NAS?.enabled) {
-            await NASshellyOnIfNasOff();
-          }
-  
-          if (cfg.SHELLY?.VUPLUS?.enabled) {
-            await VUshellyOn();
-          }
-        }
+        // absichtlich KEIN saveState
+        // RUNNING bleibt RUNNING
         break;
 
-      /* ----------------------------------------------------------
-         SHUTDOWN NAS ONLY (DAY MODE)
-      ---------------------------------------------------------- */
+      /* ---------------- SHUTDOWN NAS (DAY) ---------------- */
       case "SHUTDOWN_NAS":
-        saveState("NAS_OFF", decision, reason);
-
+        saveState("SHUTTING_DOWN", decision, reason);
         await shutDownNas();
-        // await sshShutdown();
-
-        // const res = await waitForNasShutdown();
-        // if (res) {
-        //   if (cfg.SHELLY?.NAS?.enabled) {
-        //     await NASshellyOffIfNasOff();
-        //   } else {
-        //     console.log("[AUTOMATION-MACHINE] Shelly NAS Off not enabled.");
-        //   }
-        // } else {
-        //   console.log(
-        //     "[AUTOMATION-MACHINE] Nas failed to Shutdown in 180 sec."
-        //   );
-        // }
+        saveState("IDLE", decision, "nas shut down");
         break;
 
-      /* ----------------------------------------------------------
-         SHUTDOWN ALL (NIGHT MODE)
-      ---------------------------------------------------------- */
+      /* ---------------- SHUTDOWN ALL (NIGHT) ---------------- */
       case "SHUTDOWN_ALL":
         saveState("SHUTTING_DOWN", decision, reason);
 
@@ -160,33 +97,22 @@ export async function applyDecision(decision: Decision, reason: string) {
         }
 
         await shutDownNas();
-        // if (cfg.SHELLY?.NAS?.enabled) {
-        //   await NASshellyOffIfNasOff();
-        // }
+        saveState("IDLE", decision, "all devices shut down");
         break;
 
-      /* ----------------------------------------------------------
-         ERROR
-      ---------------------------------------------------------- */
-      case "ERROR_REQUIRED_DEVICE":
-        saveState("ERROR", decision, reason);
-        break;
-
-      /* ----------------------------------------------------------
-         NO ACTION
-      ---------------------------------------------------------- */
+      /* ---------------- NO ACTION ---------------- */
       case "NO_ACTION":
+        // bewusst nichts tun
+        break;
+
+      /* ---------------- ERROR ---------------- */
+      case "ERROR_REQUIRED_DEVICE":
       default:
-        // bewusst kein saveState
+        saveState("ERROR", decision, reason);
         break;
     }
   } catch (err) {
     console.error("[AUTOMATION][MACHINE] action failed", err);
-
-    saveState(
-      "ERROR",
-      "ERROR_REQUIRED_DEVICE",
-      "exception during automation action"
-    );
+    saveState("ERROR", "ERROR_REQUIRED_DEVICE", "exception during automation action");
   }
 }

@@ -1,18 +1,14 @@
-import { loadConfig } from "../utils/config";
+// server/plugins/automation-tick.ts
 
 export default defineNitroPlugin(() => {
-  
-  const cfg = loadConfig();
-  const INTERVAL_MS = 60 * 1000;
-  // const INTERVAL_MS = (cfg.REC_SCHEDULE_INTERVALL ?? 300) * 1000;
+  const BASE_INTERVAL_MS = 10 * 1000 // fester Basistakt, echte Drosselung passiert im API-Handler
 
-  setInterval(async () => {
-    try {
-      await $fetch("/api/automation/tick", { method: "POST" });
-    } catch (err) {
-      console.error("[AUTOMATION][TICKS] tick failed", err);
-    }
-  }, INTERVAL_MS);
+  setInterval(() => {
+    // fire & forget – Logik, Config, Throttling liegt serverseitig
+    $fetch("/api/automation/tick", { method: "POST" }).catch(err => {
+      console.error("[AUTOMATION][TICK] failed", err)
+    })
+  }, BASE_INTERVAL_MS)
 
-  console.log("[AUTOMATION][TICKS] periodic tick started");
-});
+  console.log("[AUTOMATION][TICK] started (10s base interval)")
+})
