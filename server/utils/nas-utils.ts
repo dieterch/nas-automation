@@ -264,6 +264,7 @@ export async function NASshellyOnIfNasOff() {
   } else {
     console.log("[NAS-UTILS] Shelly: NAS ist offline – Einschalten freigegeben.")
     await NASshellyOff() // Trigger shelly if NAS off and Shelly already on ...
+    await sleep(1000)
   }
 
   await NASshellyOn()
