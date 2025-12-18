@@ -1,8 +1,8 @@
 import { loadConfig, saveConfig, isOncePeriodExpired } from "./config";
 
 const AUTO_ID = "auto-proxmox-backup";
-const PRE_MIN = 15;
-const POST_MIN = 15;
+const PRE_MIN = 30;
+const POST_MIN = 20;
 const FALLBACK_DURATION_MIN = 60;
 
 export async function syncProxmoxBackupOnceWindow(): Promise<boolean> {

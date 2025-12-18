@@ -106,6 +106,17 @@ async function vuOff() {
   await callApi("/api/vuplus/off", "POST");
   await refreshSystemStatus();
 }
+
+async function UpdatePlexCache() {
+  await callApi("/api/plex/scheduled-refresh", "GET");
+  await refreshSystemStatus();
+}
+
+async function ProxmoxSchedule() {
+  await callApi("/api/proxmox/schedule", "POST");
+  await refreshSystemStatus();
+}
+
 </script>
 
 <template>
@@ -129,6 +140,15 @@ async function vuOff() {
         PLEX ist <strong>{{ plexAlert.text }}</strong>
       </v-alert>
 
+      <v-row class="mb-4">
+        <v-col cols="12" md="6">
+          <v-btn block color="teal" :loading="loading" @click="UpdatePlexCache">
+            Update Plex Schedule Cache
+          </v-btn>
+        </v-col>
+
+      </v-row>
+
       <v-divider class="my-4" />
 
       <!-- ================= NAS ================= -->
@@ -143,21 +163,21 @@ async function vuOff() {
       </v-alert>
 
       <v-row class="mb-4">
-        <v-col cols="12" md="4">
-          <v-btn block color="green" :loading="loading" @click="nasOn">
+        <v-col cols="12" md="6">
+          <v-btn block color="teal" :loading="loading" @click="nasOn">
             Fenster bis Mitternacht
           </v-btn>
         </v-col>
 
-        <v-col cols="12" md="4">
-          <v-btn block color="red" :loading="loading" @click="nasOff">
+        <v-col cols="12" md="6">
+          <v-btn block color="deep-orange" :loading="loading" @click="nasOff">
             Fenster entfernen
           </v-btn>
         </v-col>
-
-        <v-col cols="12" md="4">
-          <v-btn block color="orange" :loading="loading" @click="nasReboot">
-            NAS reboot
+        
+        <v-col cols="12" md="6">
+          <v-btn block color="teal" :loading="loading" @click="ProxmoxSchedule">
+            Schedule Proxmox Backup
           </v-btn>
         </v-col>
       </v-row>

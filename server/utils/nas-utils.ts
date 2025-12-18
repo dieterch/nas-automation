@@ -138,19 +138,19 @@ export async function waitForNasToBoot(timeoutMs = 60000): Promise<boolean> {
 // NAS kontrolliert neu starten
 // -----------------------------------------------------------------------------
 
-export async function sshReboot() {
-  const { NAS_IP, NAS_SSH_PORT, NAS_SSH_USER, NAS_SSH_PASS } = getNasEnv()
-  const rebootCmd = `echo "${NAS_SSH_PASS}" | sudo -S /sbin/reboot`
-  const cmd =
-    `sshpass -p "${NAS_SSH_PASS}" ` +
-    `ssh -o StrictHostKeyChecking=no -p ${NAS_SSH_PORT} ${NAS_SSH_USER}@${NAS_IP} "${rebootCmd}"`
+// export async function sshReboot() {
+//   const { NAS_IP, NAS_SSH_PORT, NAS_SSH_USER, NAS_SSH_PASS } = getNasEnv()
+//   const rebootCmd = `echo "${NAS_SSH_PASS}" | sudo -S /sbin/reboot`
+//   const cmd =
+//     `sshpass -p "${NAS_SSH_PASS}" ` +
+//     `ssh -o StrictHostKeyChecking=no -p ${NAS_SSH_PORT} ${NAS_SSH_USER}@${NAS_IP} "${rebootCmd}"`
 
-  try {
-    await execAsync(cmd)
-  } catch (err) {
-    console.error("[NAS-UTILS] SSH reboot failed:", err)
-  }
-}
+//   try {
+//     await execAsync(cmd)
+//   } catch (err) {
+//     console.error("[NAS-UTILS] SSH reboot failed:", err)
+//   }
+// }
 
 // -----------------------------------------------------------------------------
 // Statusfunktion für Frontend (optional)
@@ -263,8 +263,8 @@ export async function NASshellyOnIfNasOff() {
     return { success: false, reason: "nas-online" }
   } else {
     console.log("[NAS-UTILS] Shelly: NAS ist offline – Einschalten freigegeben.")
-    await NASshellyOff() // Trigger shelly if NAS off and Shelly already on ...
-    await sleep(1000)
+    //await NASshellyOff() // Trigger shelly if NAS off and Shelly already on ...
+    //await sleep(1000)
   }
 
   await NASshellyOn()
