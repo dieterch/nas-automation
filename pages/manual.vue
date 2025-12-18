@@ -74,6 +74,7 @@ const plexAlert = computed<{
 async function nasOn() {
   await callApi("/api/manual/start", "POST")
   await refreshSystemStatus()
+  await callApi("/api/automation/tick)", "POST")
 }
 
 
@@ -85,6 +86,7 @@ async function nasOn() {
 async function nasOff() {
   await callApi("/api/manual/stop", "POST")
   await refreshSystemStatus()
+  await callApi("/api/automation/tick)", "POST")
 }
 
 
@@ -143,13 +145,13 @@ async function vuOff() {
       <v-row class="mb-4">
         <v-col cols="12" md="4">
           <v-btn block color="green" :loading="loading" @click="nasOn">
-            NAS ein (Fenster bis Mitternacht)
+            Fenster bis Mitternacht
           </v-btn>
         </v-col>
 
         <v-col cols="12" md="4">
           <v-btn block color="red" :loading="loading" @click="nasOff">
-            NAS aus (Fenster entfernen)
+            Fenster entfernen
           </v-btn>
         </v-col>
 

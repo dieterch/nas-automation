@@ -39,7 +39,7 @@ export function isNowInScheduledPeriod(
   return { active: false };
 }
 
-type ScheduledPeriod =
+export type ScheduledPeriod =
   | {
       id: string;
       enabled?: boolean;

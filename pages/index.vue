@@ -1,54 +1,21 @@
 <script setup lang="ts">
-import { config } from "node:process";
-import { ref, onMounted, onUnmounted ,computed } from "vue";
-import type { v } from "vue-router/dist/router-CWoNjPRp.mjs";
-import { useSystemStatus } from "~/composables/useSystemStatus";
+import { ref, onMounted, watch } from "vue";
 
-const { plexStatus, nasReady } = useSystemStatus();
-
-const plexColor = computed(() => {
-  if (plexStatus.value?.status === "green") return "green";
-  if (plexStatus.value?.status === "yellow") return "yellow";
-  return "red";
-});
-const nasColor = computed(() => (nasReady.value ? "green" : "red"));
-
-type Any = any;
-
+const data = ref<any | null>(null);
+const debugData = ref<any | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
-const data = ref<Any | null>(null);
-const cfg = ref({});
-const status = ref({});
 
-function format(d: string | Date | null | undefined) {
-  if (!d) return "–";
-  const date = typeof d === "string" ? new Date(d) : d;
-  return date.toLocaleString("de-AT", {
-    hour: "2-digit",
-    minute: "2-digit",
-    day: "2-digit",
-    month: "2-digit",
-    year:"numeric"
-  });
-}
+/**
+ * v-expansion-panels erwartet ein Array (mehrere Panels möglich)
+ */
+const debugPanels = ref<number[]>([]);
 
-function formatTime(d: string | Date | null | undefined) {
-  if (!d) return "–";
-  const date = typeof d === "string" ? new Date(d) : d;
-  return date.toLocaleString("de-AT", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-let timer: number | undefined;
-
-async function loadStatus() {
+async function load(debug = false) {
   try {
-    data.value = await $fetch("/api/automation/status", { cache: "no-store" });
-    cfg.value = await $fetch("/api/config", { cache: "no-store" });
-    status.value = await $fetch("/api/automation/status", { cache: "no-store" });
+    const url = "/api/automation/status";
+    const res = await $fetch(url, { cache: "no-store" });
+    data.value = res;
   } catch {
     error.value = "Dashboard konnte nicht geladen werden";
   } finally {
@@ -56,121 +23,154 @@ async function loadStatus() {
   }
 }
 
-onMounted(async () => {
-loadStatus();
-
-  timer = window.setInterval(() => {
-  loadStatus();
-}, 10_000); // 10 Sekunden
+onMounted(() => {
+  load();
+  setInterval(load, 10_000);
 });
 
-onUnmounted(() => {
-  if (timer) clearInterval(timer);
+/**
+ * Lazy Debug Fetch – erst wenn Panel geöffnet wird
+ */
+watch(debugPanels, (panels) => {
+  if (panels.length > 0 && !debugData.value) {
+    load(true);
+  }
 });
+
+function format(d: string | Date | null | undefined) {
+  if (!d) return "–";
+  return new Date(d).toLocaleString("de-AT", {
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
 </script>
 
 <template>
   <v-container>
-    <!-- TITLE -->
-    <v-row class="mb-4">
-      <v-col>
-        <h1>NAS Automation</h1>
-        <div class="text-medium-emphasis">
-          Überblick über Systemzustand und Automatik
-        </div>
-      </v-col>
-    </v-row>
+    <h1 class="mb-1">NAS Automation</h1>
 
-    <!-- LOADING / ERROR -->
     <v-progress-circular v-if="loading" indeterminate />
-    <v-alert v-if="error" type="error">{{ error }}</v-alert>
+    <v-alert v-else-if="error" type="error">{{ error }}</v-alert>
 
-    <template v-if="!loading && !error && data">
-      <!-- SYSTEM STATUS -->
-      <v-alert class="mb-4" variant="tonal" type="info">
-        <strong>{{ data.explanation.title }}</strong><br />
-        {{ data.explanation.description }}
-      </v-alert>
-
-      <!-- ACTIVE WINDOW -->
-      <v-card v-if="data.activeWindow" variant="tonal" class="mb-4">
-        <v-card-title>Aktives Zeitfenster</v-card-title>
+    <template v-else-if="data">
+      <!-- AUTOMATION -->
+      <v-card class="mb-4" :color="data.automation.uiVariant" variant="tonal">
+        <v-card-title>Automatik</v-card-title>
         <v-card-text>
-          <strong>{{ data.activeWindow.label }}</strong>
-          {{ data.activeWindow.id }}<br />
-          {{ data.activeWindow.start }} – {{ data.activeWindow.end }}
+          <strong>{{ data.automation.state }}</strong
+          ><br />
+          Seit {{ format(data.automation.since) }} ({{
+            data.automation.sinceHuman
+          }})
         </v-card-text>
       </v-card>
 
-      <!-- NEXT EVENT -->
-      <v-card variant="tonal" class="mb-4">
-        <v-card-title>Nächstes Ereignis</v-card-title>
+      <!-- COUNTS -->
+      <v-card class="mb-4">
+        <v-card-title>Übersicht</v-card-title>
         <v-card-text>
-          <!-- IDLE -->
-          <v-alert
-            v-if="data.nextEvent.type === 'IDLE'"
-            type="info"
-            density="compact"
-          >
-            Kein aktuelles oder kommendes Aufnahmeereignis
-          </v-alert>
-
-          <!-- RECORDING RUNNING -->
-          <template v-else-if="data.nextEvent.type === 'RECORDING_RUNNING'">
-            <v-alert type="success" density="compact" class="mb-2">
-              {{ data.nextEvent.count }} Aufnahme<span
-                v-if="data.nextEvent.count > 1"
-                >n</span
-              >
-              laufen gerade
-            </v-alert>
-
-            <v-table density="compact">
-              <tbody>
-                <tr
-                  v-for="(r, i) in data.nextEvent.recordings"
-                  :key="i"
-                >
-                  <td>{{ r.title }}</td>
-                  <td class="text-right">
-                    {{ formatTime(r.from) }} – {{ formatTime(r.to) }}
-                  </td>
-                </tr>
-              </tbody>
-            </v-table>
-          </template>
-
-          <!-- RECORDING START -->
-          <v-alert
-            v-else-if="data.nextEvent.type === 'RECORDING_START'"
-            type="info"
-            density="compact"
-          >
-            Nächste Aufnahme beginnt am
-            <strong>{{ format(data.nextEvent.at) }}</strong
-            ><br />
-            {{ data.nextEvent.title }}
-          </v-alert>
-
-          <!-- RECORDING END -->
-          <v-alert
-            v-else-if="data.nextEvent.type === 'RECORDING_END'"
-            type="warning"
-            density="compact"
-          >
-            Aufnahmen im Nachlauf ({{ data.nextEvent.count }})
-          </v-alert>
+          <table style="width: 50%">
+            <tr>
+              <th style="width: 40%; text-align: left">Typ</th>
+              <th style="width: 30%; text-align: left">laufend</th>
+              <th style="width: 30%; text-align: left">geplant</th>
+            </tr>
+            <tr>
+              <td>Aufnahmen</td>
+              <td>{{ data.counts.recordingsRunning }}</td>
+              <td>{{ data.counts.recordingsUpcoming }}</td>
+            </tr>
+            <tr>
+              <td>Zeitfenster</td>
+              <td>{{ data.counts.windowsActive }}</td>
+              <td>{{ data.counts.windowsTotal }}</td>
+            </tr>
+          </table>
         </v-card-text>
       </v-card>
-      <v-card>
+
+      <!-- WHY (nur wenn aktiv) -->
+      <v-card v-if="data.why.active" class="mb-4">
+        <v-card-title>Aktiv</v-card-title>
         <v-card-text>
-          <pre>
-{{ new Date() }}
-{{ cfg.SCHEDULED_ON_PERIODS }}
-{{ status }}
-          </pre>
+          <ul>
+            <div v-for="(r, i) in data.why.reasons" :key="i">
+              {{ r }}
+            </div>
+          </ul>
         </v-card-text>
       </v-card>
+
+      <!-- NEXT -->
+      <v-card class="mb-4">
+        <v-card-title>Nächste Ereignisse</v-card-title>
+        <v-card-text>
+          <div v-if="data.next.window">
+            Zeitfenster:
+            {{ data.next.window.label }} |
+            {{ format(data.next.window.at) }}
+            ({{ data.next.window.inHuman }})
+          </div>
+
+          <div v-if="data.next.recording" class="mt-1">
+            Aufnahme:
+            {{ data.next.recording.title }} |
+            {{ format(data.next.recording.at) }}
+            ({{ data.next.recording.inHuman }})
+          </div>
+
+          <div class="text-medium-emphasis mt-2">
+            Automatik:
+            {{ data.next.automation.type }}
+          </div>
+        </v-card-text>
+      </v-card>
+
+      <!-- DEBUG>
+      <v-expansion-panels v-model="debugPanels">
+        <v-expansion-panel>
+          <v-expansion-panel-title>
+            Debug
+          </v-expansion-panel-title>
+          <v-expansion-panel-text>
+            <pre>
+            </pre>
+          </v-expansion-panel-text>
+        </v-expansion-panel>
+        </v-expansion-panels-->
+<pre>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{{ data }}
+</pre>
     </template>
   </v-container>
 </template>

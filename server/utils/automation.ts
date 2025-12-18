@@ -1,6 +1,5 @@
 import { isVuPlusOn } from "./vuplus-utils";
 import { isNasOnlineByPort } from "./nas-utils";
-import { isProxmoxBackupRunning } from "./proxmox-utils";
 import { loadConfig } from "./config";
 import { applyDecision } from "./automation-machine";
 import type { Decision } from "./automation-machine";
@@ -38,11 +37,6 @@ function isNowInNightPeriod(
 export async function runAutomationDryRun(schedule: any) {
   const config = loadConfig();
   const now = new Date();
-
-  // /* 0) Absolute Priorität */ funktioniert noch nicht => workaround manuelles fixes Zeitfenster 
-  // if (await isProxmoxBackupRunning()) {
-  //   return decide("KEEP_RUNNING", "proxmox backup running");
-  // }
   
   const inNightPeriod = isNowInNightPeriod(now, config.NIGHT_PERIOD);
   const [nasOnline, vuOn] = await Promise.all([

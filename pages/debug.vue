@@ -53,7 +53,7 @@ onUnmounted(() => {
             background: #111;
             color: #0f0;
             padding: 12px;
-            font-size: 12px;
+            font-size: 10px;
             line-height: 1.4;
           "
         >
