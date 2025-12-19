@@ -81,7 +81,7 @@ export async function runAutomationDryRun(schedule: any) {
     }
 
     case "NO_ACTION":
-      if ( nasOnline ) {
+      if ( nasOnline && !inNightPeriod) {
         decide("SHUTDOWN_NAS", "idle (day)");
       }
       if ( vuOn && inNightPeriod ) {

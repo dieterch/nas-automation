@@ -72,14 +72,21 @@ function normalizeSchedules() {
 }
 
 /* ================= LOAD ================= */
+async function loadconfig() {
+  const data = await $fetch<Config>("/api/config")
+  config.value = data
+  normalizeSchedules()
+}
+
 
 onMounted(async () => {
   resetMessages()
   loading.value = true
   try {
-    const data = await $fetch<Config>("/api/config")
-    config.value = data
-    normalizeSchedules()
+    // const data = await $fetch<Config>("/api/config")
+    // config.value = data
+    // normalizeSchedules()
+    await loadconfig()
   } catch (e) {
     console.error(e)
     error.value = "Konfiguration konnte nicht geladen werden"
@@ -127,6 +134,36 @@ function removeScheduledPeriod(uid: string) {
   config.value.SCHEDULED_ON_PERIODS =
     config.value.SCHEDULED_ON_PERIODS.filter(p => p._uid !== uid)
 }
+
+type HttpMethod =
+  | "GET"
+  | "POST"
+  | "PUT"
+  | "PATCH"
+  | "DELETE"
+  | "get"
+  | "post"
+  | "put"
+  | "patch"
+  | "delete";
+
+async function callApi(path: string, method: HttpMethod = "GET") {
+  loading.value = true;
+  try {
+    const result = await $fetch(path, { method });
+    return result;
+  } catch (err: any) {
+    throw err;
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function ProxmoxSchedule() {
+  await callApi("/api/proxmox/schedule", "POST");
+  await loadconfig()
+}
+
 </script>
 
 <template>
@@ -331,6 +368,11 @@ function removeScheduledPeriod(uid: string) {
               <v-btn variant="outlined" @click="addScheduledPeriod">
                 Zeitfenster hinzufügen
               </v-btn>
+
+              <v-btn variant="outlined" class="ml-4" @click="ProxmoxSchedule">
+                Proxmox Backup eintragen
+              </v-btn>
+
 
             </v-card-text>
           </v-card>

@@ -129,10 +129,46 @@ onMounted(async () => {
     loading.value = false;
   }
 });
+
+type HttpMethod =
+  | "GET"
+  | "POST"
+  | "PUT"
+  | "PATCH"
+  | "DELETE"
+  | "get"
+  | "post"
+  | "put"
+  | "patch"
+  | "delete";
+
+async function callApi(path: string, method: HttpMethod = "GET") {
+  loading.value = true;
+  try {
+    const result = await $fetch(path, { method });
+    return result;
+  } catch (err: any) {
+    throw err;
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function UpdatePlexCache() {
+  await callApi("/api/plex/scheduled-refresh", "GET");
+}
+
 </script>
 
 <template>
   <v-container>
+    <v-row class="mb-4">
+      <v-col cols="12" md="6">
+        <v-btn block color="blue" :loading="loading" @click="UpdatePlexCache">
+          Update Plex Schedule Cache
+        </v-btn>
+      </v-col>
+    </v-row>
     <v-card>
       <v-card-title>Geplante Aufnahmen</v-card-title>
       <v-card-text>
@@ -159,7 +195,7 @@ onMounted(async () => {
             <v-card
               v-if="item.type === 'recording'"
               :color="
-                item.skipShutdown ? 'green-lighten-5' : 'yellow-lighten-5'
+                item.skipShutdown ? 'blue-lighten-5' : 'blue-lighten-1'
               "
               class="pa-3"
               variant="flat"

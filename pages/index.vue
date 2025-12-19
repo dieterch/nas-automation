@@ -130,6 +130,23 @@ function format(d: string | Date | null | undefined) {
         </v-card-text>
       </v-card>
 
+      <v-card v-if="data.last">
+        <v-card-title>Letzte Ereignisse</v-card-title>
+
+        <v-card-text v-if="data.last.window">
+          Zeitfenster:
+          {{ data.last.window.label }} |
+          {{ format(data.last.window.endedAt) }}
+        </v-card-text>
+
+        <v-card-text v-if="data.last.recording">
+          Aufnahme:
+          {{ data.last.recording.title }} |
+          {{ format(data.last.recording.endedAt) }}
+          ({{ data.last.recording.result }})
+        </v-card-text>
+      </v-card>
+
       <!-- DEBUG>
       <v-expansion-panels v-model="debugPanels">
         <v-expansion-panel>
@@ -142,7 +159,7 @@ function format(d: string | Date | null | undefined) {
           </v-expansion-panel-text>
         </v-expansion-panel>
         </v-expansion-panels-->
-<pre>
+      <pre>
 
 
 
@@ -170,7 +187,8 @@ function format(d: string | Date | null | undefined) {
 
 
 {{ data }}
-</pre>
+</pre
+      >
     </template>
   </v-container>
 </template>
