@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useSystemStatus } from "~/composables/useSystemStatus";
+const cfg = useRuntimeConfig()
 
 const log = ref("");
 const loading = ref(false);
@@ -102,6 +103,11 @@ async function vuOn() {
   await refreshSystemStatus();
 }
 
+async function orf1() {
+  await $fetch(`http://${cfg.public.VUPLUS_IP}/api/zap?sRef=${cfg.public.ORF1}`);
+  await refreshSystemStatus();
+}
+
 async function vuOff() {
   await callApi("/api/vuplus/off", "POST");
   await refreshSystemStatus();
@@ -197,13 +203,19 @@ async function ProxmoxSchedule() {
       </v-alert>
 
       <v-row class="mb-4">
-        <v-col cols="12" md="6">
+        <v-col cols="12" md="4">
           <v-btn block color="teal" :loading="loading" @click="vuOn">
             VU+ einschalten
           </v-btn>
         </v-col>
 
-        <v-col cols="12" md="6">
+        <v-col cols="12" md="4">
+          <v-btn block color="teal" :loading="loading" @click="orf1">
+            ORF1
+          </v-btn>
+        </v-col>
+
+        <v-col cols="12" md="4">
           <v-btn block color="deep-orange" :loading="loading" @click="vuOff">
             VU+ ausschalten
           </v-btn>

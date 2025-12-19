@@ -74,21 +74,23 @@ function format(d: string | Date | null | undefined) {
         <v-card-title>Übersicht</v-card-title>
         <v-card-text>
           <table style="width: 50%">
-            <tr>
-              <th style="width: 40%; text-align: left">Typ</th>
-              <th style="width: 30%; text-align: left">laufend</th>
-              <th style="width: 30%; text-align: left">geplant</th>
-            </tr>
-            <tr>
-              <td>Aufnahmen</td>
-              <td>{{ data.counts.recordingsRunning }}</td>
-              <td>{{ data.counts.recordingsUpcoming }}</td>
-            </tr>
-            <tr>
-              <td>Zeitfenster</td>
-              <td>{{ data.counts.windowsActive }}</td>
-              <td>{{ data.counts.windowsTotal }}</td>
-            </tr>
+            <tbody>
+              <tr>
+                <th style="width: 40%; text-align: left">Typ</th>
+                <th style="width: 30%; text-align: left">laufend</th>
+                <th style="width: 30%; text-align: left">geplant</th>
+              </tr>
+              <tr>
+                <td>Aufnahmen</td>
+                <td>{{ data.counts.recordingsRunning }}</td>
+                <td>{{ data.counts.recordingsUpcoming }}</td>
+              </tr>
+              <tr>
+                <td>Zeitfenster</td>
+                <td>{{ data.counts.windowsActive }}</td>
+                <td>{{ data.counts.windowsTotal }}</td>
+              </tr>
+            </tbody>
           </table>
         </v-card-text>
       </v-card>

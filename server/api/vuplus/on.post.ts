@@ -1,16 +1,12 @@
+import { waitForVuReady } from "../../utils/vuplus-utils"
 //import { applyDecision } from "../../utils/automation-machine";
 
 export default defineEventHandler(async () => {
-  // Manuelles Einschalten erzwingen
-  // applyDecision("START_VUPLUS", "manual start via API");
 
-  // 2️⃣ Automation danach neu evaluieren
-  // await $fetch("/api/automation/tick", { method: "POST" });
+  const { VUPLUS_IP, ORF1 } = useRuntimeConfig()
 
-  // return {
-  //   ok: true,
-  //   action: "START_VUPLUS",
-  // };
   await VUshellyOn()
+  // await waitForVuReady('http://${VUPLUS_IP}')
+  // await $fetch(`http://${VUPLUS_IP}/api/zap?sRef=${ORF1}`)
   return { ok: true }
 })
