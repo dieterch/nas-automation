@@ -74,7 +74,7 @@ const plexAlert = computed<{
 async function nasOn() {
   await callApi("/api/manual/start", "POST")
   await refreshSystemStatus()
-  await callApi("/api/automation/tick)", "POST")
+  await callApi("/api/automation/tick", "POST")
 }
 
 
@@ -86,7 +86,7 @@ async function nasOn() {
 async function nasOff() {
   await callApi("/api/manual/stop", "POST")
   await refreshSystemStatus()
-  await callApi("/api/automation/tick)", "POST")
+  await callApi("/api/automation/tick", "POST")
 }
 
 
