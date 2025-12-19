@@ -46,6 +46,7 @@ export async function runAutomationDryRun(schedule: any) {
   
   /* 1) Scheduled ON */
   const scheduled = isNowInScheduledPeriod(now, config.SCHEDULED_ON_PERIODS);
+  // console.log("isNowInScheduledPeriod(now, config.SCHEDULED_ON_PERIODS)", JSON.stringify(scheduled))
   if (scheduled.active) {
     if (!nasOnline || !vuOn) {
       return decide(

@@ -70,6 +70,26 @@ export function loadState(): AutomationStateFile {
    Save (State-Übergang)
 ------------------------------------------------------------ */
 
+// export function saveState(
+//   newState: AutomationState,
+//   decision: string,
+//   reason: string
+// ) {
+//   const prev = loadState();
+//   const now = new Date().toISOString();
+
+//   const entry: AutomationStateFile = {
+//     state: newState,
+//     lastTickAt: now,
+//     since: prev.state === newState ? prev.since : now,
+//     lastDecision: decision,
+//     reason,
+//     last: prev.last ?? {}, // ← NICHT zerstören
+//   };
+
+//   writeFileSync(STATE_FILE, JSON.stringify(entry, null, 2));
+// }
+
 export function saveState(
   newState: AutomationState,
   decision: string,
@@ -79,16 +99,17 @@ export function saveState(
   const now = new Date().toISOString();
 
   const entry: AutomationStateFile = {
+    ...prev,
     state: newState,
-    lastTickAt: now,
     since: prev.state === newState ? prev.since : now,
     lastDecision: decision,
     reason,
-    last: prev.last ?? {}, // ← NICHT zerstören
+    // ❌ lastTickAt hier NICHT anfassen
   };
 
   writeFileSync(STATE_FILE, JSON.stringify(entry, null, 2));
 }
+
 
 /* ------------------------------------------------------------
    Setters für letzte Ereignisse
