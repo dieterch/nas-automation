@@ -27,6 +27,8 @@ export default defineNuxtConfig({
     proxmoxNode: process.env.PROXMOX_NODE,
     proxmoxTokenId: process.env.PROXMOX_TOKEN_ID,
     proxmoxTokenSecret: process.env.PROXMOX_TOKEN_SECRET,
+    pbsTokenId: process.env.PBS_TOKEN_ID,
+    pbsTokenSecret: process.env.PBS_TOKEN_SECRET,
     
     public: {
       VUPLUS_IP: process.env.VUPLUS_IP,
