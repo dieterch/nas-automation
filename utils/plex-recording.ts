@@ -10,21 +10,19 @@ export interface ParsedRecording {
   aufnahmeStart: Date;
   aufnahmeEnde: Date;
   sendungsStart: Date;
-  sendungsEnde: Date,
-  startOffset: number,
-  endOffset: number,
+  sendungsEnde: Date;
+  startOffset: number;
+  endOffset: number;
   einschaltZeit: Date;
   ausschaltZeit: Date;
+  graceAusschaltZeit: Date;
 }
 
 /* ------------------------------------------------------------------
    RECORD PARSER
 ------------------------------------------------------------------ */
 
-export function parseRecording(
-  rec: any,
-  config: any
-): ParsedRecording | null {
+export function parseRecording(rec: any, config: any): ParsedRecording | null {
   const meta = rec.Metadata;
   const media = meta?.Media?.[0];
   if (!meta || !media) return null;
@@ -42,54 +40,50 @@ export function parseRecording(
   const sendungsEnde = new Date(ends);
 
   const einschaltZeit = new Date(
-    aufnahmeStart.getTime() -
-      config.VORLAUF_AUFWACHEN_MIN * 60000
-  )
+    aufnahmeStart.getTime() - config.VORLAUF_AUFWACHEN_MIN * 60000
+  );
 
   const ausschaltZeit = new Date(
-    aufnahmeEnde.getTime() +
-      config.AUSSCHALT_NACHLAUF_MIN * 60000
-  )
+    aufnahmeEnde.getTime() + config.AUSSCHALT_NACHLAUF_MIN * 60000
+  );
+
+  const graceAusschaltZeit = new Date(
+    aufnahmeEnde.getTime() + ( config.AUSSCHALT_NACHLAUF_MIN + config.GRACE_PERIOD_MIN ) * 60000
+  );
 
   // Plex Meta
-const seriesTitle = meta.grandparentTitle ?? meta.parentTitle;
-const episodeTitle =
-  meta.type === "episode" ? meta.title : undefined;
+  const seriesTitle = meta.grandparentTitle ?? meta.parentTitle;
+  const episodeTitle = meta.type === "episode" ? meta.title : undefined;
 
-const seasonNumber =
-  meta.parentIndex != null
-    ? Number(meta.parentIndex)
-    : undefined;
+  const seasonNumber =
+    meta.parentIndex != null ? Number(meta.parentIndex) : undefined;
 
-const episodeNumber =
-  meta.index != null
-    ? Number(meta.index)
-    : undefined;
+  const episodeNumber = meta.index != null ? Number(meta.index) : undefined;
 
-// S02E05 Format
-const seasonEpisode =
-  seasonNumber != null && episodeNumber != null
-    ? `S${String(seasonNumber).padStart(2, "0")}E${String(
-        episodeNumber
-      ).padStart(2, "0")}`
-    : undefined;
+  // S02E05 Format
+  const seasonEpisode =
+    seasonNumber != null && episodeNumber != null
+      ? `S${String(seasonNumber).padStart(2, "0")}E${String(
+          episodeNumber
+        ).padStart(2, "0")}`
+      : undefined;
 
-// DISPLAY TITLE (zentral & korrekt)
-let displayTitle =
-  meta.title ??
-  meta.grandparentTitle ??
-  meta.parentTitle ??
-  "Unbekannte Aufnahme";
+  // DISPLAY TITLE (zentral & korrekt)
+  let displayTitle =
+    meta.title ??
+    meta.grandparentTitle ??
+    meta.parentTitle ??
+    "Unbekannte Aufnahme";
 
-if (meta.type === "episode" && seriesTitle) {
-  displayTitle = seasonEpisode
-    ? episodeTitle
-      ? `${seriesTitle} – ${seasonEpisode} – ${episodeTitle}`
-      : `${seriesTitle} – ${seasonEpisode}`
-    : episodeTitle
-    ? `${seriesTitle} – ${episodeTitle}`
-    : seriesTitle;
-}
+  if (meta.type === "episode" && seriesTitle) {
+    displayTitle = seasonEpisode
+      ? episodeTitle
+        ? `${seriesTitle} – ${seasonEpisode} – ${episodeTitle}`
+        : `${seriesTitle} – ${seasonEpisode}`
+      : episodeTitle
+      ? `${seriesTitle} – ${episodeTitle}`
+      : seriesTitle;
+  }
 
   return {
     seriesTitle,
@@ -105,5 +99,6 @@ if (meta.type === "episode" && seriesTitle) {
     endOffset,
     einschaltZeit,
     ausschaltZeit,
+    graceAusschaltZeit,
   };
 }

@@ -1,5 +1,8 @@
 import { isNowInScheduledPeriod } from "./time-utils";
-import { ParsedRecording } from "../../utils/plex-recording";
+import {
+  ParsedRecording,
+  parseRecording,
+} from "~/utils/plex-recording";
 
 export function computeAutomationDecision(
   recordings: ParsedRecording[],
@@ -7,7 +10,7 @@ export function computeAutomationDecision(
   cfg: any
 ) {
   /* ------------------------------------------------------------
-     Scheduled ON
+     1. Scheduled ON (harte Übersteuerung)
   ------------------------------------------------------------ */
 
   const forced = isNowInScheduledPeriod(now, cfg.SCHEDULED_ON_PERIODS);
@@ -19,85 +22,25 @@ export function computeAutomationDecision(
   }
 
   /* ------------------------------------------------------------
-     Aufnahme läuft JETZT
+     2. Aufnahme-Zeitfenster inkl. Grace-Ausschaltzeit
+        [aufnahmeStart ... graceAusschaltZeit]
   ------------------------------------------------------------ */
 
   if (
     recordings.some(
-      (r) => now >= r.aufnahmeStart && now < r.aufnahmeEnde
+      (r) =>
+        now >= r.aufnahmeStart &&
+        now < r.graceAusschaltZeit
     )
   ) {
     return {
       decision: "KEEP_RUNNING",
-      reason: "recording active",
+      reason: "recording or grace after recording",
     };
   }
 
   /* ------------------------------------------------------------
-     Vorlauf
-  ------------------------------------------------------------ */
-
-  if (
-    recordings.some(
-      (r) => now >= r.einschaltZeit && now < r.aufnahmeStart
-    )
-  ) {
-    return {
-      decision: "KEEP_RUNNING",
-      reason: "approaching recording",
-    };
-  }
-
-  /* ------------------------------------------------------------
-     Nachlauf
-  ------------------------------------------------------------ */
-
-  if (
-    recordings.some(
-      (r) => now >= r.aufnahmeEnde && now < r.ausschaltZeit
-    )
-  ) {
-    return {
-      decision: "KEEP_RUNNING",
-      reason: "post-run active",
-    };
-  }
-
-  /* ------------------------------------------------------------
-     Grace Period ZWISCHEN zwei Aufnahmen
-  ------------------------------------------------------------ */
-
-  const graceMs = (cfg.GRACE_PERIOD_MIN ?? 0) * 60_000;
-
-  if (graceMs > 0 && recordings.length >= 2) {
-    const sorted = recordings
-      .slice()
-      .sort(
-        (a, b) =>
-          a.aufnahmeStart.getTime() - b.aufnahmeStart.getTime()
-      );
-
-    for (let i = 0; i < sorted.length - 1; i++) {
-      const cur = sorted[i];
-      const next = sorted[i + 1];
-
-      // wir befinden uns in der Lücke
-      if (
-        now >= cur.ausschaltZeit &&
-        now < next.einschaltZeit &&
-        next.einschaltZeit.getTime() -
-          cur.ausschaltZeit.getTime() <= graceMs
-      ) {
-        return {
-          decision: "KEEP_RUNNING",
-          reason: "grace period between recordings",
-        };
-      }
-    }
-  }
-
-  /* ------------------------------------------------------------
-     Idle
+     3. Sonst: OFF
   ------------------------------------------------------------ */
 
   return {
@@ -105,6 +48,115 @@ export function computeAutomationDecision(
     reason: "idle",
   };
 }
+
+
+// import { isNowInScheduledPeriod } from "./time-utils";
+// import { ParsedRecording } from "../../utils/plex-recording";
+
+// export function computeAutomationDecision(
+//   recordings: ParsedRecording[],
+//   now: Date,
+//   cfg: any
+// ) {
+//   /* ------------------------------------------------------------
+//      Scheduled ON
+//   ------------------------------------------------------------ */
+
+//   const forced = isNowInScheduledPeriod(now, cfg.SCHEDULED_ON_PERIODS);
+//   if (forced.active) {
+//     return {
+//       decision: "KEEP_RUNNING",
+//       reason: forced.reason ?? "scheduled on window",
+//     };
+//   }
+
+//   /* ------------------------------------------------------------
+//      Aufnahme läuft JETZT
+//   ------------------------------------------------------------ */
+
+//   if (
+//     recordings.some(
+//       (r) => now >= r.aufnahmeStart && now < r.aufnahmeEnde
+//     )
+//   ) {
+//     return {
+//       decision: "KEEP_RUNNING",
+//       reason: "recording active",
+//     };
+//   }
+
+//   /* ------------------------------------------------------------
+//      Vorlauf
+//   ------------------------------------------------------------ */
+
+//   if (
+//     recordings.some(
+//       (r) => now >= r.einschaltZeit && now < r.aufnahmeStart
+//     )
+//   ) {
+//     return {
+//       decision: "KEEP_RUNNING",
+//       reason: "approaching recording",
+//     };
+//   }
+
+//   /* ------------------------------------------------------------
+//      Nachlauf
+//   ------------------------------------------------------------ */
+
+//   if (
+//     recordings.some(
+//       (r) => now >= r.aufnahmeEnde && now < r.ausschaltZeit
+//     )
+//   ) {
+//     return {
+//       decision: "KEEP_RUNNING",
+//       reason: "post-run active",
+//     };
+//   }
+
+//   /* ------------------------------------------------------------
+//      Grace Period ZWISCHEN zwei Aufnahmen
+//   ------------------------------------------------------------ */
+
+//   const graceMs = (cfg.GRACE_PERIOD_MIN ?? 0) * 60_000;
+
+//   if (graceMs > 0 && recordings.length >= 2) {
+//     const sorted = recordings
+//       .slice()
+//       .sort(
+//         (a, b) =>
+//           a.aufnahmeStart.getTime() - b.aufnahmeStart.getTime()
+//       );
+
+//     for (let i = 0; i < sorted.length - 1; i++) {
+//       const cur = sorted[i];
+//       const next = sorted[i + 1];
+
+//       // wir befinden uns in der Lücke
+//       if (
+//         now >= cur.ausschaltZeit &&
+//         now < next.einschaltZeit &&
+//         next.einschaltZeit.getTime() -
+//           cur.ausschaltZeit.getTime() <= graceMs
+//       ) {
+//         return {
+//           decision: "KEEP_RUNNING",
+//           reason: "grace period between recordings",
+//         };
+//       }
+//     }
+//   }
+
+//   /* ------------------------------------------------------------
+//      Idle
+//   ------------------------------------------------------------ */
+
+//   return {
+//     decision: "NO_ACTION",
+//     reason: "idle",
+//   };
+// }
 
 
 // import { isNowInScheduledPeriod } from "./time-utils";

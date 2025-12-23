@@ -1,13 +1,21 @@
 import { loadConfig } from "~/server/utils/config"
 import { readPlexCache } from "~/server/utils/plex-cache"
-import { parseRecording } from "~/utils/plex-recording"
+import { parseRecording, ParsedRecording } from "~/utils/plex-recording"
 import { ScheduledPeriod } from "~/server/utils/time-utils"
 
 export default defineEventHandler(async () => {
   const now = new Date()
   const config = loadConfig()
 
-  const windows: any[] = []
+  const windows: {
+    id: string
+    type: "recording" | "scheduled"
+    label: string
+    start: string
+    end: string
+  }[] = []
+
+  const recordings: ParsedRecording[] = []
 
   /* ------------------------------------------------------------
      Recordings (aus Plex-Cache)
@@ -21,12 +29,15 @@ export default defineEventHandler(async () => {
     const rec = parseRecording(op, config)
     if (!rec) continue
 
+    recordings.push(rec)
+
+    // Timeline-Fenster: von Einschalten bis GRACE-Ausschaltzeit
     windows.push({
       id: `rec-${rec.displayTitle}`,
       type: "recording",
       label: rec.displayTitle,
       start: rec.einschaltZeit.toISOString(),
-      end: rec.ausschaltZeit.toISOString(),
+      end: rec.graceAusschaltZeit.toISOString(),
     })
   }
 
@@ -94,10 +105,16 @@ export default defineEventHandler(async () => {
     (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
   )
 
+  recordings.sort(
+    (a, b) =>
+      a.aufnahmeStart.getTime() - b.aufnahmeStart.getTime()
+  )
+
   return {
     now: now.toISOString(),
     graceMin: config.GRACE_PERIOD_MIN,
     windows,
+    recordings,
   }
 })
 

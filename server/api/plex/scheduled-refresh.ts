@@ -81,7 +81,7 @@ async function shouldUpdateCache(
 
 /**
  * Entfernt nur wirklich erledigte Aufnahmen
- * (ausschaltZeit < now)
+ * (graceausschaltzeit < now)
  */
 function sanitizePlexPayload(data: any, config: any): any {
   const mc = data?.MediaContainer;
@@ -93,7 +93,7 @@ function sanitizePlexPayload(data: any, config: any): any {
     const parsed: ParsedRecording | null = parseRecording(op, config);
     if (!parsed) return false;
 
-    return now < parsed.ausschaltZeit;
+    return now < parsed.graceAusschaltZeit;
   });
 
   return data;
