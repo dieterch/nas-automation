@@ -74,6 +74,7 @@ const menu = [
   { title: "Manual", to: "/manual" },
   { title: "Einstellungen", to: "/settings" },
   { title: "Debug", to: "/debug" },
+  { title: "Timeline", to: "/timeline" },
 ];
 </script>
 
