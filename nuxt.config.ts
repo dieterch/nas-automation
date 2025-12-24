@@ -1,3 +1,5 @@
+// nuxt.config.ts
+import { defineNuxtConfig } from 'nuxt/config'
 import vuetify, { transformAssetUrls } from "vite-plugin-vuetify";
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
@@ -7,6 +9,10 @@ export default defineNuxtConfig({
   devServer: {
     port: 4800,
     host: "0.0.0.0",
+  },
+    sourcemap: {
+    server: true,
+    client: true
   },
   runtimeConfig: {
     plexHost: process.env.PLEX_HOST,

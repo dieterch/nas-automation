@@ -1,0 +1,39 @@
+{
+  // Verwendet IntelliSense zum Ermitteln möglicher Attribute.
+  // Zeigen Sie auf vorhandene Attribute, um die zugehörigen Beschreibungen anzuzeigen.
+  // Weitere Informationen finden Sie unter https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "chrome",
+      "request": "launch",
+      "name": "Nuxt: Client (Chrome)",
+      "url": "http://0.0.0.0:4800",
+      "webRoot": "${workspaceFolder}",
+      "sourceMaps": true
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Nuxt 4 Nitro",
+      "program": "${workspaceFolder}/node_modules/nuxt/bin/nuxt.mjs",
+      "args": ["dev"],
+      "cwd": "${workspaceFolder}",
+      "autoAttachChildProcesses": true,
+      "console": "integratedTerminal",
+      "sourceMaps": true,
+
+      "serverReadyAction": {
+        "pattern": "Local:\\s+(https?://localhost:\\d+)",
+        "uriFormat": "%s",
+        "action": "openExternally"
+      }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Nuxt 4: Client + Server",
+      "configurations": ["Nuxt 4 Nitro", "Nuxt: Client (Chrome)"]
+    }
+  ]
+}

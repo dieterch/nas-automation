@@ -6,7 +6,8 @@ export default defineNitroPlugin(() => {
   setInterval(() => {
     // console.log(".")
     // fire & forget – Logik, Config, Throttling liegt serverseitig
-    $fetch("/api/automation/tick", { method: "POST" }).catch(err => {
+    $fetch("/api/automation/tick", { method: "POST" })
+    .catch(err => {
       console.error("[AUTOMATION][TICK] failed", err)
     })
   }, BASE_INTERVAL_MS)

@@ -17,6 +17,8 @@
   ],
   "compilerOptions": {
     "strict": false,
+    "sourceMap": true,
+    "inlineSources": true,
     "noUncheckedIndexedAccess": false,
     "types": [
       "node",

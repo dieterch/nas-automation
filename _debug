@@ -1,0 +1,1 @@
+NODE_OPTIONS="--inspect=9235" npm run dev

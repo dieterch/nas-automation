@@ -5,6 +5,7 @@ import { applyDecision } from "./automation-machine";
 import type { Decision } from "./automation-machine";
 import { computeAutomationDecision } from "./automation-decision";
 import { isNowInScheduledPeriod } from "./time-utils";
+import { loadState, saveState } from "./automation-state";
 import { ParsedRecording, parseRecording } from "../../utils/plex-recording";
 
 /* ------------------------------------------------------------------
@@ -34,31 +35,42 @@ function isNowInNightPeriod(
 /* ------------------------------------------------------------------
    MAIN AUTOMATION
 ------------------------------------------------------------------ */
-export async function runAutomationDryRun(schedule: any) {
+// export async function runAutomationDryRun(schedule: any) {
+export async function runAutomationDryRun() {
   const config = loadConfig();
+  const state = loadState()
   const now = new Date();
-  
+  const schedule = await readPlexCache();
+
+  // guard if no schedule available
+  if (!schedule?.data) {
+    saveState(state.state, "NO_ACTION", "no plex cache");
+    return {
+      ok: false,
+      error: "no_schedule_cache",
+    };
+  }
+
   const inNightPeriod = isNowInNightPeriod(now, config.NIGHT_PERIOD);
   const [nasOnline, vuOn] = await Promise.all([
     isNasOnlineByPort(),
     isVuPlusOn(),
   ]);
-  
+
   /* 1) Scheduled ON */
-  const scheduled = isNowInScheduledPeriod(now, config.SCHEDULED_ON_PERIODS);
-  // console.log("isNowInScheduledPeriod(now, config.SCHEDULED_ON_PERIODS)", JSON.stringify(scheduled))
-  if (scheduled.active) {
-    if (!nasOnline || !vuOn) {
-      return decide(
-        "START_REQUIRED_DEVICES",
-        scheduled.reason ?? "scheduled on window"
-      );
-    }
-    return decide("KEEP_RUNNING", scheduled.reason ?? "scheduled on window");
-  }
+  // const scheduled = isNowInScheduledPeriod(now, config.SCHEDULED_ON_PERIODS);
+  // // console.log("isNowInScheduledPeriod(now, config.SCHEDULED_ON_PERIODS)", JSON.stringify(scheduled))
+  // if (scheduled.active) {
+  //   if (!nasOnline || !vuOn) {
+  //     return decide(
+  //       "START_REQUIRED_DEVICES",
+  //       scheduled.reason ?? "scheduled on window"
+  //     );
+  //   }
+  //   return decide("KEEP_RUNNING", scheduled.reason ?? "scheduled on window");
+  // }
 
-
-  /* 2) Recordings */
+  /* 2) Parse and filter invalid Recordings */
   const raw = schedule?.data?.MediaContainer?.MediaGrabOperation ?? [];
   const recordings = raw
     .map((r: any) => parseRecording(r, config))
@@ -69,9 +81,9 @@ export async function runAutomationDryRun(schedule: any) {
   );
 
   const decisionResult = computeAutomationDecision(recordings, now, config);
+  saveState(state.state, decisionResult.decision, decisionResult.reason);
 
   switch (decisionResult.decision) {
-
     case "KEEP_RUNNING": {
       if (!nasOnline || !vuOn) {
         return decide("START_REQUIRED_DEVICES", decisionResult.reason);
@@ -82,14 +94,17 @@ export async function runAutomationDryRun(schedule: any) {
     }
 
     case "NO_ACTION":
-      if ( nasOnline && !inNightPeriod) {
+      if (nasOnline && !inNightPeriod) {
+        console.log('decide("SHUTDOWN_NAS", "idle (day)");');
         decide("SHUTDOWN_NAS", "idle (day)");
       }
-      if ( vuOn && inNightPeriod ) {
+      if (vuOn && inNightPeriod) {
+        console.log('decide("SHUTDOWN_ALL, "idle (night);');
         decide("SHUTDOWN_ALL", "idle (night)")
       }
       return decide("NO_ACTION", "idle");
   }
+
 }
 
 /* ------------------------------------------------------------------
