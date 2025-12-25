@@ -106,61 +106,6 @@ function format(d: string | Date | null | undefined) {
           </ul>
         </v-card-text>
       </v-card>
-
-      <!-- NEXT -->
-      <v-card class="mb-4">
-        <v-card-title>Nächste Ereignisse</v-card-title>
-        <v-card-text>
-          <div v-if="data.next.window">
-            Zeitfenster:
-            {{ data.next.window.label }} |
-            {{ format(data.next.window.at) }}
-            ({{ data.next.window.inHuman }})
-          </div>
-
-          <div v-if="data.next.recording" class="mt-1">
-            Aufnahme:
-            {{ data.next.recording.title }} |
-            {{ format(data.next.recording.at) }}
-            ({{ data.next.recording.inHuman }})
-          </div>
-
-          <div class="text-medium-emphasis mt-2">
-            Automatik:
-            {{ data.next.automation.type }}
-          </div>
-        </v-card-text>
-      </v-card>
-
-      <v-card v-if="data.last">
-        <v-card-title>Letzte Ereignisse</v-card-title>
-
-        <v-card-text v-if="data.last.window">
-          Zeitfenster:
-          {{ data.last.window.label }} |
-          {{ format(data.last.window.endedAt) }}
-        </v-card-text>
-
-        <v-card-text v-if="data.last.recording">
-          Aufnahme:
-          {{ data.last.recording.title }} |
-          {{ format(data.last.recording.endedAt) }}
-          ({{ data.last.recording.result }})
-        </v-card-text>
-      </v-card>
-
-      <!-- DEBUG>
-      <v-expansion-panels v-model="debugPanels">
-        <v-expansion-panel>
-          <v-expansion-panel-title>
-            Debug
-          </v-expansion-panel-title>
-          <v-expansion-panel-text>
-            <pre>
-            </pre>
-          </v-expansion-panel-text>
-        </v-expansion-panel>
-        </v-expansion-panels-->
       <pre>
 
 

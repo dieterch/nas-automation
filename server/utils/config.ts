@@ -18,14 +18,6 @@ type ScheduledPeriod = {
 /* ------------------------------------------------------------------
    Helpers
 ------------------------------------------------------------------ */
-// function stripUiFields(cfg: any) {
-//   if (Array.isArray(cfg?.SCHEDULED_ON_PERIODS)) {
-//     cfg.SCHEDULED_ON_PERIODS = cfg.SCHEDULED_ON_PERIODS.map(
-//       ({ _uid, ...rest }: ScheduledPeriod) => rest
-//     )
-//   }
-//   return cfg
-// }
 function stripUiFields(cfg: any) {
   if (Array.isArray(cfg?.SCHEDULED_ON_PERIODS)) {
     cfg.SCHEDULED_ON_PERIODS = cfg.SCHEDULED_ON_PERIODS

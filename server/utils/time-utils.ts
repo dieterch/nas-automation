@@ -17,8 +17,8 @@ export function isNowInScheduledPeriod(
 
     if (p.type === "weekly") {
       if (
-        Array.isArray(p.days) &&
-        p.days.includes(now.getDay()) &&
+        Array.isArray(p.weekdays) &&
+        p.weekdays.includes(now.getDay()) &&
         isNowInTimeRange(now, p.start, p.end)
       ) {
         return { active: true, reason: "weekly window " + p.id };
@@ -52,7 +52,7 @@ export type ScheduledPeriod =
       id: string;
       enabled?: boolean;
       type: "weekly";
-      days: number[]; // 0=So … 6=Sa
+      weekdays: number[]; // 0=So … 6=Sa
       start: string;
       end: string;
       label?: string;
@@ -92,8 +92,8 @@ export function getActiveScheduledWindow(
 
     if (p.type === "weekly") {
       if (
-        Array.isArray(p.days) &&
-        p.days.includes(now.getDay()) &&
+        Array.isArray(p.weekdays) &&
+        p.weekdays.includes(now.getDay()) &&
         isNowInTimeRange(now, p.start, p.end)
       ) {
         return {

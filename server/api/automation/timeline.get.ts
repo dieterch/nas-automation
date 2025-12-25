@@ -1,91 +1,126 @@
-import { loadConfig } from "~/server/utils/config"
-import { readPlexCache } from "~/server/utils/plex-cache"
-import { parseRecording, ParsedRecording } from "~/utils/plex-recording"
-import { ScheduledPeriod } from "~/server/utils/time-utils"
+import { loadConfig } from "~/server/utils/config";
+import { readPlexCache } from "~/server/utils/plex-cache";
+import { parseRecording, ParsedRecording } from "~/utils/plex-recording";
+import { ScheduledPeriod } from "~/server/utils/time-utils";
+
+type TimelineWindow = {
+  id: string;
+  type: "recording" | "scheduled";
+  label: string;
+  start: string;
+  end: string;
+};
 
 export default defineEventHandler(async () => {
-  const now = new Date()
-  const config = loadConfig()
+  const now = new Date();
+  const config = loadConfig();
 
-  const windows: {
-    id: string
-    type: "recording" | "scheduled"
-    label: string
-    start: string
-    end: string
-  }[] = []
-
-  const recordings: ParsedRecording[] = []
+  const windows: TimelineWindow[] = [];
+  const recordings: ParsedRecording[] = [];
 
   /* ------------------------------------------------------------
      Recordings (aus Plex-Cache)
   ------------------------------------------------------------ */
 
-  const plexCache = await readPlexCache()
-  const ops =
-    plexCache?.data?.MediaContainer?.MediaGrabOperation ?? []
+  const plexCache = await readPlexCache();
+  const ops = plexCache?.data?.MediaContainer?.MediaGrabOperation ?? [];
 
   for (const op of ops) {
-    const rec = parseRecording(op, config)
-    if (!rec) continue
+    const rec = parseRecording(op, config);
+    if (!rec) continue;
 
-    recordings.push(rec)
+    recordings.push(rec);
 
-    // Timeline-Fenster: von Einschalten bis GRACE-Ausschaltzeit
     windows.push({
       id: `rec-${rec.displayTitle}`,
       type: "recording",
       label: rec.displayTitle,
       start: rec.einschaltZeit.toISOString(),
       end: rec.graceAusschaltZeit.toISOString(),
-    })
+    });
   }
 
   /* ------------------------------------------------------------
-     Scheduled Windows (aus Config)
+     Timeline-Zeitraum (immer groß genug)
   ------------------------------------------------------------ */
 
-  const periods: ScheduledPeriod[] =
-    config.SCHEDULED_ON_PERIODS ?? []
+  let rangeStart = new Date(now);
+  let rangeEnd = new Date(now);
+
+  if (recordings.length) {
+    for (const r of recordings) {
+      if (r.einschaltZeit < rangeStart) rangeStart = r.einschaltZeit;
+      if (r.graceAusschaltZeit > rangeEnd) rangeEnd = r.graceAusschaltZeit;
+    }
+  }
+
+  rangeStart = new Date(rangeStart);
+  rangeStart.setDate(rangeStart.getDate() - 7);
+  rangeStart.setHours(0, 0, 0, 0);
+
+  rangeEnd = new Date(rangeEnd);
+  rangeEnd.setDate(rangeEnd.getDate() + 7);
+  rangeEnd.setHours(23, 59, 59, 999);
+
+  /* ------------------------------------------------------------
+     Scheduled Windows (Config)
+  ------------------------------------------------------------ */
+
+  const periods: ScheduledPeriod[] = config.SCHEDULED_ON_PERIODS ?? [];
 
   for (const p of periods) {
-    if (p.enabled === false) continue
+    if (p.enabled === false) continue;
 
-    const base = new Date(now)
-
+    // DAILY
     if (p.type === "daily") {
-      const start = timeOnDate(base, p.start)
-      const end = timeOnDate(base, p.end, start)
+      const d = new Date(rangeStart);
 
-      windows.push({
-        id: `sched-${p.id}`,
-        type: "scheduled",
-        label: p.label ?? p.id,
-        start: start.toISOString(),
-        end: end.toISOString(),
-      })
+      while (d <= rangeEnd) {
+        const start = timeOnDate(d, p.start);
+        const end = timeOnDate(d, p.end, start);
+
+        windows.push({
+          id: `sched-${p.id}-${d.toISOString().slice(0, 10)}`,
+          type: "scheduled",
+          label: p.label ?? p.id,
+          start: start.toISOString(),
+          end: end.toISOString(),
+        });
+
+        d.setDate(d.getDate() + 1);
+      }
     }
 
-    if (p.type === "weekly") {
-      if (!p.days?.includes(base.getDay())) continue
+    // WEEKLY  ✅ JS-Days 0=So … 6=Sa (wie config + nextOccurrence)
+    if (p.type === "weekly" && Array.isArray(p.weekdays)) {
+      const d = new Date(rangeStart);
 
-      const start = timeOnDate(base, p.start)
-      const end = timeOnDate(base, p.end, start)
+      while (d <= rangeEnd) {
+        const day = d.getDay(); // 0=So … 6=Sa
 
-      windows.push({
-        id: `sched-${p.id}`,
-        type: "scheduled",
-        label: p.label ?? p.id,
-        start: start.toISOString(),
-        end: end.toISOString(),
-      })
+        if (p.weekdays.includes(day)) {
+          const start = timeOnDate(d, p.start);
+          const end = timeOnDate(d, p.end, start);
+
+          windows.push({
+            id: `sched-${p.id}-${d.toISOString().slice(0, 10)}`,
+            type: "scheduled",
+            label: p.label ?? p.id,
+            start: start.toISOString(),
+            end: end.toISOString(),
+          });
+        }
+
+        d.setDate(d.getDate() + 1);
+      }
     }
 
+    // ONCE
     if (p.type === "once") {
-      const baseDate = new Date(p.date + "T00:00:00")
+      const baseDate = new Date(`${p.date}T00:00:00`);
 
-      const start = timeOnDate(baseDate, p.start)
-      const end = timeOnDate(baseDate, p.end, start)
+      const start = timeOnDate(baseDate, p.start);
+      const end = timeOnDate(baseDate, p.end, start);
 
       windows.push({
         id: `sched-${p.id}`,
@@ -93,48 +128,43 @@ export default defineEventHandler(async () => {
         label: p.label ?? p.id,
         start: start.toISOString(),
         end: end.toISOString(),
-      })
+      });
     }
   }
 
   /* ------------------------------------------------------------
-     Sortieren für Timeline
+     Sortieren
   ------------------------------------------------------------ */
 
   windows.sort(
     (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
-  )
+  );
 
   recordings.sort(
-    (a, b) =>
-      a.aufnahmeStart.getTime() - b.aufnahmeStart.getTime()
-  )
+    (a, b) => a.aufnahmeStart.getTime() - b.aufnahmeStart.getTime()
+  );
 
   return {
     now: now.toISOString(),
     graceMin: config.GRACE_PERIOD_MIN,
     windows,
     recordings,
-  }
-})
+  };
+});
 
 /* ------------------------------------------------------------
    Helpers
 ------------------------------------------------------------ */
 
-function timeOnDate(
-  base: Date,
-  hhmm: string,
-  start?: Date
-): Date {
-  const [h, m] = hhmm.split(":").map(Number)
-  const d = new Date(base)
-  d.setHours(h, m, 0, 0)
+function timeOnDate(base: Date, hhmm: string, start?: Date): Date {
+  const [h, m] = hhmm.split(":").map(Number);
+  const d = new Date(base);
+  d.setHours(h, m, 0, 0);
 
   // über Mitternacht
   if (start && d <= start) {
-    d.setDate(d.getDate() + 1)
+    d.setDate(d.getDate() + 1);
   }
 
-  return d
+  return d;
 }

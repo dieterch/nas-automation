@@ -13,10 +13,6 @@
       </label>
     </div>
 
-    <!--div class="status" :class="statusNow">
-      STATUS (jetzt): {{ statusNow }}
-    </div-->
-
     <svg
       v-if="statusSegments.length"
       :width="SVG_WIDTH"
@@ -26,7 +22,6 @@
       <!-- TIME AXIS -->
       <g class="time-axis">
         <g v-for="(t, i) in ticks" :key="i">
-          <!-- Tick line -->
           <line
             :x1="xFor(t.time)"
             :x2="xFor(t.time)"
@@ -34,7 +29,6 @@
             :y2="HEADER_HEIGHT"
             class="tick-line"
           />
-          <!-- Label -->
           <text
             :x="xFor(t.time)"
             y="12"
@@ -48,10 +42,7 @@
 
       <!-- NOW LABEL -->
       <g class="now-label">
-        <text 
-          :x="xFor(now) + 18" 
-          :y="HEADER_HEIGHT + 14" 
-          text-anchor="middle">
+        <text :x="xFor(now) + 18" :y="HEADER_HEIGHT + 14">
           {{ formatTime(now) }}
         </text>
       </g>
@@ -81,15 +72,7 @@
       </g>
 
       <!-- RECORDINGS -->
-      <g v-for="(r, i) in recordings" :key="i">
-        <!--rect
-          :x="xFor(r.einschaltZeit)"
-          :y="rowY(i)"
-          :width="xFor(r.graceAusschaltZeit) - xFor(r.einschaltZeit)"
-          height="20"
-          class="recording"
-        /-->
-        <!-- einschaltZeit - sendungsStart -->
+      <g v-for="(r, i) in visibleRecordings" :key="i">
         <rect
           :x="xFor(r.einschaltZeit)"
           :y="rowY(i)"
@@ -97,7 +80,6 @@
           height="20"
           class="prepostrun"
         />
-        <!-- sendungsStart - sendungsEnde -->
         <rect
           :x="xFor(r.sendungsStart)"
           :y="rowY(i)"
@@ -105,7 +87,6 @@
           height="20"
           class="recording"
         />
-        <!-- sendungsEnde - ausschaltZeit -->
         <rect
           :x="xFor(r.sendungsEnde)"
           :y="rowY(i)"
@@ -113,7 +94,6 @@
           height="20"
           class="prepostrun"
         />
-        <!-- ausschaltZeit - graceAusschaltZeit-->
         <rect
           :x="xFor(r.ausschaltZeit)"
           :y="rowY(i)"
@@ -121,16 +101,17 @@
           height="20"
           class="graceperiod"
         />
-        <text :x="LEFT_PAD - 10" :y="rowY(i) + 10" text-anchor="end">
+
+        <text :x="LEFT_PAD - 10" :y="rowY(i) + 12" text-anchor="end">
           {{ r.displayTitle }}
         </text>
         <text
           :x="LEFT_PAD - 10"
-          :y="rowY(i) + 24"
+          :y="rowY(i) + 26"
           text-anchor="end"
           font-size="12px"
         >
-          {{ format(r.sendungsStart) }} - {{ formatTime(r.sendungsEnde) }}
+          {{ format(r.sendungsStart) }} – {{ formatTime(r.sendungsEnde) }}
         </text>
       </g>
 
@@ -147,11 +128,15 @@
 </template>
 
 <script setup lang="ts">
-import { computeAutomationDecision } from "~/server/utils/automation-decision";
+/* ============================================================
+   FETCH
+============================================================ */
 
-/* ------------------------------------------------------------
-   DTO (GENAU wie API!)
------------------------------------------------------------- */
+const { data: timelineRaw } = await useFetch("/api/automation/timeline");
+
+/* ============================================================
+   TYPES
+============================================================ */
 
 interface TimelineRecordingDTO {
   displayTitle: string;
@@ -164,28 +149,40 @@ interface TimelineRecordingDTO {
   sendungsEnde: string;
 }
 
-/* ------------------------------------------------------------
-   FETCH
------------------------------------------------------------- */
+type WindowDTO = {
+  id: string;
+  type: "scheduled" | "recording";
+  label: string;
+  start: string;
+  end: string;
+};
 
-const { data: timelineRaw } = await useFetch("/api/automation/timeline");
-const { data: cfg } = await useFetch("/api/config");
+type IntervalWithSource = {
+  start: Date;
+  end: Date;
+  source: "recording" | "scheduled";
+};
 
-const safeTimeline = computed(() => timelineRaw.value ?? null);
-const safeCfg = computed(() => cfg.value ?? null);
+type StatusSegment = {
+  start: Date;
+  end: Date;
+  status: "OFF" | "ACTIVE_RECORDING" | "ACTIVE_SCHEDULED";
+};
 
-/* ------------------------------------------------------------
+/* ============================================================
    BASE
------------------------------------------------------------- */
+============================================================ */
+
 const HEADER_HEIGHT = 12;
 
-const now = computed(() =>
-  timelineRaw.value?.now ? new Date(timelineRaw.value.now) : new Date()
-);
+const now = computed(() => {
+  const n = timelineRaw.value?.now;
+  return n ? new Date(n) : new Date();
+});
 
-/* ------------------------------------------------------------
-   RECORDINGS (NORMALISIERT!)
------------------------------------------------------------- */
+/* ============================================================
+   RECORDINGS
+============================================================ */
 
 const recordings = computed(() => {
   const tl = timelineRaw.value;
@@ -203,9 +200,9 @@ const recordings = computed(() => {
   }));
 });
 
-/* ------------------------------------------------------------
+/* ============================================================
    RANGE
------------------------------------------------------------- */
+============================================================ */
 
 const range = ref<"2d" | "7d" | "all">("2d");
 
@@ -220,15 +217,14 @@ const rangeEnd = computed(() => {
 const visibleRecordings = computed(() =>
   recordings.value.filter(
     (r) =>
-      r.graceAusschaltZeit instanceof Date &&
       r.graceAusschaltZeit >= now.value &&
       r.einschaltZeit <= rangeEnd.value
   )
 );
 
-/* ------------------------------------------------------------
+/* ============================================================
    LAYOUT
------------------------------------------------------------- */
+============================================================ */
 
 const SVG_WIDTH = 1340;
 const ROW_HEIGHT = 36;
@@ -239,38 +235,24 @@ const svgHeight = computed(
   () => HEADER_HEIGHT + 40 + visibleRecordings.value.length * ROW_HEIGHT
 );
 
-/* ------------------------------------------------------------
+function rowY(i: number): number {
+  return HEADER_HEIGHT + 30 + i * ROW_HEIGHT;
+}
+
+/* ============================================================
    TIME SCALE
------------------------------------------------------------- */
+============================================================ */
 
-const minTime = computed<Date>(() => {
-  if (visibleRecordings.value.length === 0) {
-    return now.value;
-  }
-
-  let min = Infinity;
-
-  for (const r of visibleRecordings.value) {
-    const t = r.einschaltZeit.getTime();
-    if (t < min) min = t;
-  }
-
-  return new Date(min);
+const minTime = computed(() => {
+  const list = visibleRecordings.value;
+  if (!list.length) return now.value;
+  return new Date(Math.min(...list.map(r => r.einschaltZeit.getTime())));
 });
 
-const maxTime = computed<Date>(() => {
-  if (visibleRecordings.value.length === 0) {
-    return now.value;
-  }
-
-  let max = -Infinity;
-
-  for (const r of visibleRecordings.value) {
-    const t = r.graceAusschaltZeit.getTime();
-    if (t > max) max = t;
-  }
-
-  return new Date(max);
+const maxTime = computed(() => {
+  const list = visibleRecordings.value;
+  if (!list.length) return now.value;
+  return new Date(Math.max(...list.map(r => r.graceAusschaltZeit.getTime())));
 });
 
 function xFor(t: Date): number {
@@ -283,261 +265,103 @@ function xFor(t: Date): number {
   );
 }
 
-// function rowY(i: number): number {
-//   return 30 + i * ROW_HEIGHT
-// }
-
-function rowY(i: number): number {
-  return HEADER_HEIGHT + 30 + i * ROW_HEIGHT;
-}
+/* ============================================================
+   TICKS
+============================================================ */
 
 type Tick = { time: Date; label: string };
 
 const ticks = computed<Tick[]>(() => {
-  const start = minTime.value;
-  const end = maxTime.value;
-
   const HOUR = 60 * 60 * 1000;
   const DAY = 24 * HOUR;
 
-  // 🔑 Intervall bestimmen
-  let step = DAY;
-  if (range.value === "2d") step = 6 * HOUR;
-  else if (range.value === "7d") step = DAY;
+  let step = range.value === "2d" ? 6 * HOUR : DAY;
+  const result: Tick[] = [];
 
-  const ticks: Tick[] = [];
+  const d = new Date(minTime.value);
+  d.setMinutes(0, 0, 0);
+  if (step === DAY) d.setHours(0);
+  else d.setHours(Math.floor(d.getHours() / 6) * 6);
 
-  const d = new Date(start);
-
-  if (step === DAY) {
-    d.setHours(0, 0, 0, 0);
-  } else {
-    // 🔑 auf 6h-Grenze runden (0,6,12,18)
-    d.setMinutes(0, 0, 0);
-    d.setHours(Math.floor(d.getHours() / 6) * 6);
-  }
-
-  while (d <= end) {
-    ticks.push({
+  while (d <= maxTime.value) {
+    result.push({
       time: new Date(d),
       label:
         step === DAY
-          ? d.toLocaleDateString("de-AT", {
-              weekday: "short",
-              day: "2-digit",
-              month: "2-digit",
-            })
-          : d.toLocaleTimeString("de-AT", {
-              hour: "2-digit",
-            }),
+          ? d.toLocaleDateString("de-AT", { weekday: "short", day: "2-digit", month: "2-digit" })
+          : d.toLocaleTimeString("de-AT", { hour: "2-digit" }),
     });
-
     d.setTime(d.getTime() + step);
   }
-
-  return ticks;
+  return result;
 });
 
-/* ------------------------------------------------------------
-   STATUS (NUR computeAutomationDecision!)
------------------------------------------------------------- */
-
-type Status = "ACTIVE" | "GRACE" | "OFF";
-
-function statusAt(t: Date): Status {
-  const cfgVal = safeCfg.value;
-  if (!cfgVal) return "OFF";
-
-  const res = computeAutomationDecision(recordings.value as any, t, cfgVal);
-
-  if (res.decision !== "KEEP_RUNNING") return "OFF";
-  return res.reason?.includes("grace") ? "GRACE" : "ACTIVE";
-}
-
-const statusNow = computed<Status>(() => statusAt(now.value));
-
-/* ------------------------------------------------------------
-   STATUS SEGMENTS (ACTIVE + OFF)
------------------------------------------------------------- */
-
-type Interval = {
-  start: Date
-  end: Date
-}
-
-type StatusSegment = {
-  start: Date
-  end: Date
-  status: "ACTIVE" | "OFF"
-}
+/* ============================================================
+   STATUS SEGMENTS
+============================================================ */
 
 const statusSegments = computed<StatusSegment[]>(() => {
-  const recs = visibleRecordings.value
-  if (recs.length === 0) return []
+  const tl = timelineRaw.value;
+  if (!tl || !Array.isArray(tl.windows)) return [];
 
-  /* -----------------------------
-     ACTIVE-Intervalle sammeln
-  ----------------------------- */
+  const intervals: IntervalWithSource[] = [];
 
-  const intervals: Interval[] = []
-
-  for (const r of recs) {
-    const start = r.einschaltZeit
-    const end = r.graceAusschaltZeit
-    if (start < end) {
-      intervals.push({ start, end })
-    }
+  for (const r of visibleRecordings.value) {
+    intervals.push({
+      start: r.einschaltZeit,
+      end: r.graceAusschaltZeit,
+      source: "recording",
+    });
   }
 
-  if (intervals.length === 0) return []
-
-  intervals.sort((a, b) => a.start.getTime() - b.start.getTime())
-
-  /* -----------------------------
-     ACTIVE-Intervalle mergen
-  ----------------------------- */
-
-  const merged: Interval[] = []
-
-  const first = intervals[0]
-  if (!first) return []
-
-  let currentStart: Date = first.start
-  let currentEnd: Date = first.end
-
-  for (let i = 1; i < intervals.length; i++) {
-    const next = intervals[i]
-    if (!next) continue
-
-    if (next.start <= currentEnd) {
-      if (next.end > currentEnd) {
-        currentEnd = next.end
-      }
-    } else {
-      merged.push({ start: currentStart, end: currentEnd })
-      currentStart = next.start
-      currentEnd = next.end
-    }
+  for (const w of tl.windows as WindowDTO[]) {
+    if (w.type !== "scheduled") continue;
+    const s = new Date(w.start);
+    const e = new Date(w.end);
+    if (s < e) intervals.push({ start: s, end: e, source: "scheduled" });
   }
 
-  merged.push({ start: currentStart, end: currentEnd })
+  if (!intervals.length) return [];
 
-  /* -----------------------------
-     ACTIVE + OFF zusammensetzen
-  ----------------------------- */
+  intervals.sort((a, b) => a.start.getTime() - b.start.getTime());
 
-  const result: StatusSegment[] = []
+  const result: StatusSegment[] = [];
+  let cursor = minTime.value.getTime();
+  const end = maxTime.value.getTime();
 
-  let cursor: Date = minTime.value
+  while (cursor < end) {
+    const active = intervals.filter(i => i.start.getTime() <= cursor && i.end.getTime() > cursor);
+    let next = end;
 
-  for (const seg of merged) {
-    if (seg.start > cursor) {
-      result.push({
-        start: cursor,
-        end: seg.start,
-        status: "OFF",
-      })
+    for (const i of intervals) {
+      const s = i.start.getTime();
+      const e = i.end.getTime();
+      if (s > cursor) next = Math.min(next, s);
+      if (e > cursor) next = Math.min(next, e);
     }
 
     result.push({
-      start: seg.start,
-      end: seg.end,
-      status: "ACTIVE",
-    })
+      start: new Date(cursor),
+      end: new Date(next),
+      status:
+        active.length === 0
+          ? "OFF"
+          : active.some(a => a.source === "recording")
+          ? "ACTIVE_RECORDING"
+          : "ACTIVE_SCHEDULED",
+    });
 
-    cursor = seg.end
+    cursor = next;
   }
 
-  if (cursor < maxTime.value) {
-    result.push({
-      start: cursor,
-      end: maxTime.value,
-      status: "OFF",
-    })
-  }
+  return result;
+});
 
-  return result
-})
+/* ============================================================
+   FORMAT
+============================================================ */
 
-
-// type Interval = {
-//   start: Date
-//   end: Date
-// }
-
-// type StatusSegment = {
-//   start: Date
-//   end: Date
-//   status: "ACTIVE" | "OFF"
-// }
-
-// type Segment = { start: Date; end: Date; status: "ACTIVE" | "OFF" }
-
-// const statusSegments = computed<StatusSegment[]>(() => {
-//   if (!visibleRecordings.value.length) return []
-
-//   // 1) Intervalle sammeln (NAS AN)
-//   const intervals: Interval[] = []
-
-//   for (const r of visibleRecordings.value) {
-//     if (r.einschaltZeit < r.graceAusschaltZeit) {
-//       intervals.push({
-//         start: r.einschaltZeit,
-//         end: r.graceAusschaltZeit,
-//       })
-//     }
-//   }
-
-//   if (intervals.length === 0) return []
-
-//   // 2) Nach Start sortieren
-//   intervals.sort(
-//     (a, b) => a.start.getTime() - b.start.getTime()
-//   )
-
-//   // 3) Overlaps mergen
-// // 3) Overlaps mergen
-// const merged: Interval[] = []
-
-// const first: Interval | undefined = intervals[0]
-// if (!first) return []
-
-// let currentStart: Date = first.start
-// let currentEnd: Date = first.end
-
-// for (let i = 1; i < intervals.length; i++) {
-//   const next = intervals[i]
-//   if (!next) continue   // <-- DAS ist der entscheidende Fix
-
-//   if (next.start <= currentEnd) {
-//     if (next.end > currentEnd) {
-//       currentEnd = next.end
-//     }
-//   } else {
-//     merged.push({
-//       start: currentStart,
-//       end: currentEnd,
-//     })
-//     currentStart = next.start
-//     currentEnd = next.end
-//   }
-// }
-
-// merged.push({
-//   start: currentStart,
-//   end: currentEnd,
-// })
-
-
-//   // 4) In Status-Segmente umwandeln (nur EIN)
-//   return merged.map(i => ({
-//     start: i.start,
-//     end: i.end,
-//     status: "ACTIVE",
-//   }))
-// })
-
-function format(d: string | Date | null | undefined) {
+function format(d: Date | string | null | undefined) {
   if (!d) return "–";
   return new Date(d).toLocaleString("de-AT", {
     hour: "2-digit",
@@ -548,108 +372,32 @@ function format(d: string | Date | null | undefined) {
   });
 }
 
-function formatTime(d: string | Date | null | undefined) {
+function formatTime(d: Date | string | null | undefined) {
   if (!d) return "–";
-  return new Date(d).toLocaleString("de-AT", {
+  return new Date(d).toLocaleTimeString("de-AT", {
     hour: "2-digit",
     minute: "2-digit",
-    //day: "2-digit",
-    //month: "2-digit",
-    //year: "numeric",
   });
 }
 </script>
 
 <style scoped>
-.page {
-  padding: 24px;
-  font-family: system-ui;
-}
+.page { padding: 24px; font-family: system-ui; }
+.controls { margin-bottom: 12px; }
 
-.controls {
-  margin-bottom: 12px;
-}
+.timeline { border: 1px solid #ccc; background: #e4e4e487; }
 
-.status {
-  padding: 8px 12px;
-  font-weight: bold;
-  margin-bottom: 12px;
-}
-.status.ACTIVE {
-  background: #2e7d32;
-  color: white;
-}
-.status.GRACE {
-  background: #f9a825;
-  color: black;
-}
-.status.OFF {
-  background: #c62828;
-  color: white;
-}
+rect.bg-ACTIVE_RECORDING { fill: rgba(46,125,50,.15); }
+rect.bg-ACTIVE_SCHEDULED { fill: rgba(33,150,243,.18); }
+rect.bg-OFF { fill: rgba(198,40,40,.12); }
 
-.timeline {
-  border: 1px solid #ccc;
-  background: #e4e4e487;
-}
+rect.recording { fill:#1e6222; opacity:.85; }
+rect.prepostrun { fill:#adbef4; opacity:.85; }
+rect.graceperiod { fill:#f4eba8; opacity:.85; }
 
-rect.bg-ACTIVE {
-  fill: rgba(46, 125, 50, 0.15);
-}
-rect.bg-GRACE {
-  fill: rgba(249, 168, 37, 0.25);
-}
-rect.bg-OFF {
-  fill: rgba(198, 40, 40, 0.12);
-}
-
-rect.recording {
-  fill: #1e6222;
-  opacity: 0.85;
-}
-rect.prepostrun {
-  fill: #adbef4;
-  opacity: 0.85;
-}
-rect.graceperiod {
-  fill: #f4eba8;
-  opacity: 0.85;
-}
-
-.now-line {
-  stroke: red;
-  stroke-width: 2;
-}
-
-.time-axis {
-  pointer-events: none;
-}
-
-.tick-line {
-  stroke: #bbb;
-  stroke-width: 1;
-}
-
-.tick-label {
-  fill: #333;
-  font-size: 11px;
-}
-
-.gridlines {
-  pointer-events: none;
-}
-
-.grid-line {
-  stroke: #000;
-  stroke-opacity: 0.08;
-  stroke-width: 1;
-  shape-rendering: crispEdges;
-}
-
-.now-label text {
-  fill: red;
-  font-size: 11px;
-  font-weight: 600;
-  pointer-events: none;
-}
+.now-line { stroke:red; stroke-width:2; }
+.tick-line { stroke:#bbb; }
+.tick-label { font-size:11px; }
+.grid-line { stroke:#000; stroke-opacity:.08; }
+.now-label text { fill:red; font-size:11px; font-weight:600; }
 </style>
