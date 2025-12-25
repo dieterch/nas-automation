@@ -57,19 +57,6 @@ export async function runAutomationDryRun() {
     isVuPlusOn(),
   ]);
 
-  /* 1) Scheduled ON */
-  // const scheduled = isNowInScheduledPeriod(now, config.SCHEDULED_ON_PERIODS);
-  // // console.log("isNowInScheduledPeriod(now, config.SCHEDULED_ON_PERIODS)", JSON.stringify(scheduled))
-  // if (scheduled.active) {
-  //   if (!nasOnline || !vuOn) {
-  //     return decide(
-  //       "START_REQUIRED_DEVICES",
-  //       scheduled.reason ?? "scheduled on window"
-  //     );
-  //   }
-  //   return decide("KEEP_RUNNING", scheduled.reason ?? "scheduled on window");
-  // }
-
   /* 2) Parse and filter invalid Recordings */
   const raw = schedule?.data?.MediaContainer?.MediaGrabOperation ?? [];
   const recordings = raw

@@ -58,8 +58,11 @@ function format(d: string | Date | null | undefined) {
 
     <template v-else-if="data">
       <!-- AUTOMATION -->
-      <v-card class="mb-4" :color="data.automation.uiVariant" variant="tonal">
-        <v-card-title>Automatik</v-card-title>
+      <v-card 
+        class="mb-4" 
+        color="info" 
+        variant="tonal">
+        <v-card-title>Status</v-card-title>
         <v-card-text>
           <strong>{{ data.automation.state }}</strong
           ><br />
@@ -70,8 +73,11 @@ function format(d: string | Date | null | undefined) {
       </v-card>
 
       <!-- COUNTS -->
-      <v-card class="mb-4">
-        <v-card-title>Übersicht</v-card-title>
+      <v-card 
+        class="mb-4" 
+        color="blue-grey-darken-3" 
+        variant="tonal">
+        <v-card-title>Ereignisse</v-card-title>
         <v-card-text>
           <table style="width: 50%">
             <tbody>
@@ -81,12 +87,12 @@ function format(d: string | Date | null | undefined) {
                 <th style="width: 30%; text-align: left">geplant</th>
               </tr>
               <tr>
-                <td>Aufnahmen</td>
+                <td><a href="/recordings">Aufnahmen</a></td>
                 <td>{{ data.counts.recordingsRunning }}</td>
                 <td>{{ data.counts.recordingsUpcoming }}</td>
               </tr>
               <tr>
-                <td>Zeitfenster</td>
+                <td><a href="/settings">Zeitfenster</a></td>
                 <td>{{ data.counts.windowsActive }}</td>
                 <td>{{ data.counts.windowsTotal }}</td>
               </tr>
@@ -95,16 +101,30 @@ function format(d: string | Date | null | undefined) {
         </v-card-text>
       </v-card>
 
-      <!-- WHY (nur wenn aktiv) -->
-      <v-card v-if="data.why.active" class="mb-4">
-        <v-card-title>Aktiv</v-card-title>
-        <v-card-text>
-          <ul>
-            <div v-for="(r, i) in data.why.reasons" :key="i">
-              {{ r }}
-            </div>
-          </ul>
+      <v-card v-if="data.next" 
+        class="mb-4" 
+        color="green-darken-1" 
+        variant="tonal"
+        title="Nächste Aufnahme"
+        :subtitle=data.next.recording.title
+        >
+        <v-card-text v-if="data.next.recording">
+          in {{ data.next.recording.inHuman }},
+          {{ format(data.next.recording.at) }}
         </v-card-text>
+      </v-card>
+
+      <v-card v-if="data.next" 
+        class="mb-4" 
+        color="light-blue-darken-4" 
+        variant="tonal"
+        title="Nächstes Zeitfenster"
+        :subtitle=data.next.window.title>
+        <v-card-text v-if="data.next.window">
+          in {{ data.next.window.inHuman }},
+          {{ format(data.next.window.at) }}
+        </v-card-text>
+
       </v-card>
       <pre>
 
@@ -139,3 +159,6 @@ function format(d: string | Date | null | undefined) {
     </template>
   </v-container>
 </template>
+<style scoped>
+a { text-decoration: none;}
+</style>
