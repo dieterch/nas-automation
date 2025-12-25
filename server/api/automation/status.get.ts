@@ -26,8 +26,9 @@ export default defineEventHandler(async () => {
   recordings.sort(
     (a, b) => a.aufnahmeStart.getTime() - b.aufnahmeStart.getTime()
   );
+
   const runningRecordings = recordings.filter(
-    (r) => r.aufnahmeStart <= now && r.aufnahmeEnde > now
+    (r) => r.einschaltZeit <= now && r.graceAusschaltZeit > now
   );
 
   const nextRecording = recordings.find((r) => r.einschaltZeit > now) ?? null;
@@ -57,6 +58,7 @@ export default defineEventHandler(async () => {
       .filter((w) => new Date(w.startDate) > now)[0] ?? null;
 
   return {
+    now:now,
     automation: {
       state: mapVariant(state.state),
       since: state.since,
@@ -71,7 +73,8 @@ export default defineEventHandler(async () => {
       windowsTotal: config.SCHEDULED_ON_PERIODS?.length ?? 0,
       windowsActive: activeWindow ? 1 : 0,
     },
-
+    runningRecordings: runningRecordings || null,
+    test: [],
     next: {
       recording: nextRecording
         ? {
@@ -191,6 +194,6 @@ function mapVariant(state: string) {
     case "RUNNING":
       return "ON";
     default:
-      return "?";
+      return state;
   }
 }
