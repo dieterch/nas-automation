@@ -72,8 +72,7 @@ function formatTime(d: string | Date | null | undefined) {
         novariant="tonal">
         <v-card-title>Status</v-card-title>
         <v-card-text>
-          <strong>{{ data.automation.state }}</strong
-          ><br />
+          {{ data.automation.state }} | 
           Seit {{ format(data.automation.since) }} ({{
             data.automation.sinceHuman
           }})
@@ -85,8 +84,7 @@ function formatTime(d: string | Date | null | undefined) {
         novariant="tonal">
         <v-card-title>Status</v-card-title>
         <v-card-text>
-          <strong>{{ data.automation.state }}</strong
-          ><br />
+          {{ data.automation.state }} | 
           Seit {{ format(data.automation.since) }} ({{
             data.automation.sinceHuman
           }})
@@ -139,9 +137,10 @@ function formatTime(d: string | Date | null | undefined) {
         color="rgba(46,125,50,.15)"
         novariant="tonal"
         title="Nächste Aufnahme"
-        :subtitle=data.next.recording.title
+        :nosubtitle=data.next.recording.title
         >
         <v-card-text v-if="data.next.recording">
+          {{ data.next.recording.title }} |
           in {{ data.next.recording.inHuman }},
           {{ format(data.next.recording.at) }}
         </v-card-text>
@@ -152,8 +151,9 @@ function formatTime(d: string | Date | null | undefined) {
         color="rgba(33,150,243,.18)" 
         novariant="tonal"
         title="Nächstes Zeitfenster"
-        :subtitle=data.next.window.title>
+        :nosubtitle=data.next.window.title>
         <v-card-text v-if="data.next.window">
+          {{ data.next.window.title }} |
           in {{ data.next.window.inHuman }},
           {{ format(data.next.window.at) }}
         </v-card-text>
