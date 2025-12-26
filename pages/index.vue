@@ -55,6 +55,13 @@ function formatTime(d: string | Date | null | undefined) {
     minute: "2-digit",
   });
 }
+
+const automationColor = computed(() =>
+  data.value.automation.state === "ON"
+    ? "rgba(46,125,50,.15)"
+    : "rgba(198,40,40,.12)"
+);
+
 </script>
 
 <template>
@@ -66,36 +73,17 @@ function formatTime(d: string | Date | null | undefined) {
 
     <template v-else-if="data">
       <!-- AUTOMATION -->
-      <v-card v-if="data.automation.state == 'ON'"
-        class="mb-4" 
-        color="rgba(46,125,50,.15)" 
-        novariant="tonal">
+      <v-card v-if="data?.automation" class="mb-4" :color="automationColor" novariant="tonal">
         <v-card-title>Status</v-card-title>
         <v-card-text>
-          {{ data.automation.state }} | 
-          Seit {{ format(data.automation.since) }} ({{
-            data.automation.sinceHuman
-          }})
-        </v-card-text>
-      </v-card>
-      <v-card v-else
-        class="mb-4" 
-        color="rgba(198,40,40,.12)" 
-        novariant="tonal">
-        <v-card-title>Status</v-card-title>
-        <v-card-text>
-          {{ data.automation.state }} | 
-          Seit {{ format(data.automation.since) }} ({{
-            data.automation.sinceHuman
-          }})
+          {{ data.automation.state }} |
+          Seit {{ format(data.automation.since) }}
+          ({{ data.automation.sinceHuman }})
         </v-card-text>
       </v-card>
 
       <!-- COUNTS -->
-      <v-card 
-        class="mb-4" 
-        color="blue-grey-darken-3" 
-        variant="tonal">
+      <v-card class="mb-4" color="blue-grey-darken-3" variant="tonal">
         <v-card-title>Ereignisse</v-card-title>
         <v-card-text>
           <table style="width: 50%">
@@ -120,25 +108,31 @@ function formatTime(d: string | Date | null | undefined) {
         </v-card-text>
       </v-card>
 
-      <v-card v-if="data.runningRecordings.length > 0"
-        class="mb-4"
-        title="Laufende Aufnahme(n)"
-        color="green-lighten-3"
-        novariant="tonal" >
+      <!--v-card v-if="data.runningRecordings.length > 0" class="mb-4" title="Laufende Aufnahme(n)" color="green-lighten-3"
+        novariant="tonal">
         <v-card-text v-for="r in data.runningRecordings">
-          {{ r.displayTitle }} | 
-          {{ formatTime(r.sendungsStart) }} - 
+          {{ r.displayTitle }} |
+          {{ formatTime(r.sendungsStart) }} -
           {{ formatTime(r.sendungsEnde) }}
         </v-card-text>
+      </v-card>-->
+
+      <v-card v-if="data.runningRecordings.length > 0" class="mb-4" title="Laufende Aufnahme(n)" color="green-lighten-3"
+        novariant="tonal">
+        <v-list density="compact" class="py-0">
+          <v-list-item v-for="r in data.runningRecordings" :key="r.displayTitle">
+            <v-list-item-title>
+              {{ r.displayTitle }}
+            </v-list-item-title>
+            <v-list-item-subtitle>
+              {{ formatTime(r.sendungsStart) }} – {{ formatTime(r.sendungsEnde) }}
+            </v-list-item-subtitle>
+          </v-list-item>
+        </v-list>
       </v-card>
 
-      <v-card v-if="data.next.recording" 
-        class="mb-4" 
-        color="rgba(46,125,50,.15)"
-        novariant="tonal"
-        title="Nächste Aufnahme"
-        :nosubtitle=data.next.recording.title
-        >
+      <v-card v-if="data.next.recording" class="mb-4" color="rgba(46,125,50,.15)" novariant="tonal"
+        title="Nächste Aufnahme" :nosubtitle=data.next.recording.title>
         <v-card-text v-if="data.next.recording">
           {{ data.next.recording.title }} |
           in {{ data.next.recording.inHuman }},
@@ -146,12 +140,8 @@ function formatTime(d: string | Date | null | undefined) {
         </v-card-text>
       </v-card>
 
-      <v-card v-if="data.next.window" 
-        class="mb-4" 
-        color="rgba(33,150,243,.18)" 
-        novariant="tonal"
-        title="Nächstes Zeitfenster"
-        :nosubtitle=data.next.window.title>
+      <v-card v-if="data.next.window" class="mb-4" color="rgba(33,150,243,.18)" novariant="tonal"
+        title="Nächstes Zeitfenster" :nosubtitle=data.next.window.title>
         <v-card-text v-if="data.next.window">
           {{ data.next.window.title }} |
           in {{ data.next.window.inHuman }},
@@ -187,11 +177,12 @@ function formatTime(d: string | Date | null | undefined) {
 
 
 {{ data }}
-</pre
-      >
+</pre>
     </template>
   </v-container>
 </template>
 <style scoped>
-a { text-decoration: none;}
+a {
+  text-decoration: none;
+}
 </style>
