@@ -80,7 +80,7 @@ const timelineEntries = computed<AnyRecord[]>(() => {
 
       wiederstart = new Date(
         next.aufnahmeStart.getTime() -
-          config.value.VORLAUF_AUFWACHEN_MIN * 60000
+        config.value.VORLAUF_AUFWACHEN_MIN * 60000
       );
     }
 
@@ -104,6 +104,10 @@ const timelineEntries = computed<AnyRecord[]>(() => {
 
   return entries;
 });
+
+const recordingEntries = computed(() =>
+  timelineEntries.value.filter(e => e.type === "recording")
+);
 
 /* ------------------------------------------------------------------
    API LOAD
@@ -169,104 +173,98 @@ async function UpdatePlexCache() {
         </v-btn>
       </v-col>
     </v-row>
+
     <v-card>
-      <v-card-title>Geplante Aufnahmen</v-card-title>
+      <!--v-card-title>Geplante Aufnahmen</v-card-title-->
       <v-card-text>
         <v-progress-circular v-if="loading" indeterminate />
 
-        <v-alert type="info" density="compact">
+        <!--v-alert type="info" density="compact" variant="text" class="pa-0 mb-2">
           Letzter erfolgreicher Abruf:
           {{ lastFetch ? format(new Date(lastFetch)) : "nie" }}
+        </v-alert-->
+
+        <v-alert density="compact" variant="text" class="pa-0 mb-2 d-flex align-center">
+          <v-icon size="14" color="grey-darken-1" class="mr-1">
+            mdi-information-outline
+          </v-icon>
+
+          <span class="text-caption text-medium-emphasis">
+            Letzter erfolgreicher Abruf:
+            {{ lastFetch ? format(new Date(lastFetch)) : "nie" }}
+          </span>
         </v-alert>
+
 
         <v-alert v-if="error" type="error">
           Fehler beim Laden der Daten
         </v-alert>
 
-        <v-row dense v-if="!loading && !error">
-          <v-col
-            v-for="item in timelineEntries"
-            :key="
-              item.type === 'recording' ? item.rec?.id : item.from?.getTime()
-            "
-            cols="12"
-          >
-            <!-- AUFNAHME -->
-            <v-card
-              v-if="item.type === 'recording'"
-              :color="
-                item.skipShutdown ? 'blue-lighten-5' : 'blue-lighten-1'
-              "
-              class="pa-3"
-              variant="flat"
-            >
-              <v-card-title>
-                Aufnahme #{{ item.index }} – {{ item.displayTitle }}
-              </v-card-title>
+        <!-- ⬇️ KEIN Grid, EIN Panels-Container -->
+        <v-expansion-panels v-if="!loading && !error" variant="accordion" class="recording-panels">
+          <v-expansion-panel v-for="item in recordingEntries" :key="item.index" :bg-color="item.skipShutdown
+            ? 'blue-lighten-5'
+            : 'blue-lighten-4'
+            " elevation="0">
+            <!-- HEADER -->
+            <v-expansion-panel-title class="py-1 text-body-2 d-flex align-center">
+              <v-icon size="16" class="mr-1">mdi-record-rec</v-icon>
+              <span class="font-weight-medium">
+                {{ item.index }} {{ item.displayTitle }}
+              </span>
+            </v-expansion-panel-title>
 
-              <v-card-text>
-                <v-table density="compact">
-                  <tbody>
-                    <tr>
-                      <th></th>
-                      <th><strong>Start</strong></th>
-                      <th><strong>Ende</strong></th>
-                    </tr>
-                    <tr>
-                      <td><strong>Geräte</strong></td>
-                      <td>{{ format(item.einschaltZeit) }}</td>
-                      <td>{{ format(item.ausschaltZeit) }}</td>
-                    </tr>
-                    <tr>
-                      <td><strong>Aufnahme</strong></td>
-                      <td>{{ format(item.aufnahmeStart) }}</td>
-                      <td>{{ format(item.aufnahmeEnde) }}</td>
-                    </tr>
-                    <tr>
-                      <td><strong>Sendung</strong></td>
-                      <td>{{ format(item.sendungsStart) }}</td>
-                      <td>{{ format(item.sendungsEnde) }}</td>
-                    </tr>
-                    <tr v-if="item.gapMinutes !== null">
-                      <td><strong>Shutdown</strong></td>
-                      <td>
-                        {{
-                          item.skipShutdown
-                            ? "kein Shutdown"
-                            : item.gapMinutes + " Min. Pause"
-                        }}
-                      </td>
-                      <td>
-                        {{ item.skipShutdown ? "-" : format(item.wiederstart) }}
-                      </td>
-                    </tr>
-                    <tr v-if="item.wiederstart"></tr>
-                  </tbody>
-                </v-table>
-              </v-card-text>
-            </v-card>
-
-            <!-- SHUTDOWN -->
-            <!--v-card v-else color="yellow-lighten-4" class="pa-3" variant="flat">
-              <v-card-title>Shutdown-Periode</v-card-title>
-              <v-card-text>
-                <v-table density="compact">
-                  <tbody>
-                    <tr>
-                      <td><strong>Von</strong></td>
-                      <td>{{ format(item.from) }}</td>
-                    </tr>
-                    <tr>
-                      <td><strong>Bis</strong></td>
-                      <td>{{ format(item.to) }}</td>
-                    </tr>
-                  </tbody>
-                </v-table>
-              </v-card-text>
-            </v-card-->
-          </v-col>
-        </v-row>
+            <!-- DETAILS -->
+            <v-expansion-panel-text class="py-1 px-2">
+              <v-table density="compact">
+                <tbody>
+                  <tr>
+                    <td class="label">Geräte</td>
+                    <td>{{ format(item.einschaltZeit) }}</td>
+                    <td>{{ format(item.ausschaltZeit) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="label">Aufnahme</td>
+                    <td>{{ format(item.aufnahmeStart) }}</td>
+                    <td>{{ format(item.aufnahmeEnde) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="label">Sendung</td>
+                    <td>{{ format(item.sendungsStart) }}</td>
+                    <td>{{ format(item.sendungsEnde) }}</td>
+                  </tr>
+                  <tr v-if="item.gapMinutes !== null">
+                    <td class="label">Shutdown</td>
+                    <td>
+                      {{
+                        item.skipShutdown
+                          ? "kein Shutdown"
+                          : item.gapMinutes + " Min. Pause"
+                      }}
+                    </td>
+                    <td>
+                      {{ item.skipShutdown ? "-" : format(item.wiederstart) }}
+                    </td>
+                  </tr>
+                </tbody>
+              </v-table>
+            </v-expansion-panel-text>
+          </v-expansion-panel>
+        </v-expansion-panels>
       </v-card-text>
     </v-card>
   </v-container>
 </template>
+
+<style scoped>
+.label {
+  font-weight: 600;
+  white-space: nowrap;
+  padding-right: 8px;
+}
+
+.v-table td {
+  padding: 2px 6px !important;
+  font-size: 12px;
+}
+</style>
