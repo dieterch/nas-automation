@@ -66,7 +66,6 @@ const automationColor = computed(() =>
 
 <template>
   <v-container>
-    <h1 class="mb-1">NAS Automation</h1>
 
     <v-progress-circular v-if="loading" indeterminate />
     <v-alert v-else-if="error" type="error">{{ error }}</v-alert>

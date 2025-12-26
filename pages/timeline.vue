@@ -1,6 +1,6 @@
 <template>
   <div class="page">
-    <h1>NAS Automation – Timeline</h1>
+    <h1>Timeline</h1>
 
     <div class="controls">
       <label>
