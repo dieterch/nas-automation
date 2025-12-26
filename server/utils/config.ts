@@ -139,9 +139,20 @@ function nextOccurrence(p: any, now = new Date()): number {
   return Number.MAX_SAFE_INTEGER
 }
 
-export function isOncePeriodExpired(p: any, now = new Date()): boolean {
-  if (p.type !== "once" || !p.date || !p.end) return false
+// export function isOncePeriodExpired(p: any, now = new Date()): boolean {
+//   if (p.type !== "once" || !p.date || !p.end) return false
 
-  const end = new Date(`${p.date}T${p.end}:00`)
-  return end.getTime() < now.getTime()
+//   const end = new Date(`${p.date}T${p.end}:00`)
+//   return end.getTime() < now.getTime()
+// }
+
+const ONCE_EXPIRE_GRACE_MS = 60_000; // 1 minute (tune if needed)
+
+export function isOncePeriodExpired(
+  p: any,
+  now = new Date()
+): boolean {
+  if (p.type !== "once" || !p.date || !p.end) return false;
+  const end = new Date(`${p.date}T${p.end}:00`).getTime();
+  return now.getTime() > end + ONCE_EXPIRE_GRACE_MS;
 }

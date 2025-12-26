@@ -3,6 +3,7 @@ import { loadConfig, saveConfig, isOncePeriodExpired } from "./config";
 const PRE_MIN = 30;
 const POST_MIN = 50;
 const FALLBACK_DURATION_MIN = 60;
+const FALLBACK_DURATION = 60;
 
 /* ------------------------------------------------------------
    ID / Label aus Quelle ableiten
@@ -88,9 +89,7 @@ export async function syncProxmoxBackupOnceWindow(): Promise<boolean> {
   );
 
   const nasSyncJob = syncCfg?.data?.find(
-    (j: any) =>
-      j.store === "backup-nfs" &&
-      j.schedule
+    (j: any) => j.store === "backup-nfs" && j.schedule
   );
 
   if (!nasVzdumpJob && !nasSyncJob) {
@@ -147,15 +146,13 @@ export async function syncProxmoxBackupOnceWindow(): Promise<boolean> {
 
     const last = tasks?.data?.find(
       (t: any) =>
-        t.starttime &&
-        t.endtime &&
-        t.worker_id?.includes(nasSyncJob.id)
+        t.starttime && t.endtime && t.worker_id?.includes(nasSyncJob.id)
     );
 
     if (last) durationMs = (last.endtime - last.starttime) * 1000;
 
     // obere Schranke setzen
-    durationMs = Math.min(durationMs, fallbackMs)
+    durationMs = Math.min(durationMs, fallbackMs);
   }
 
   console.info(
@@ -194,6 +191,15 @@ export async function syncProxmoxBackupOnceWindow(): Promise<boolean> {
   const periods = cfg.SCHEDULED_ON_PERIODS ?? [];
   const existing = periods.find((p: any) => p.id === autoId);
 
+  if (existing?.type === "once") {
+    const { startMs, endMs } = onceWindowToRange(existing);
+
+    if (now.getTime() >= startMs && now.getTime() < endMs) {
+      // 🔒 Active window must not be replaced
+      return cleaned; // only return true if we removed expired windows earlier
+    }
+  }
+
   const changed =
     !existing ||
     existing.date !== next.date ||
@@ -221,6 +227,12 @@ function toDate(ms: number) {
 
 function toTime(ms: number) {
   return new Date(ms).toTimeString().slice(0, 5);
+}
+
+function onceWindowToRange(p: any): { startMs: number; endMs: number } {
+  const start = new Date(`${p.date}T${p.start}:00`).getTime();
+  const end = new Date(`${p.date}T${p.end}:00`).getTime();
+  return { startMs: start, endMs: end };
 }
 
 /* ------------------------------------------------------------

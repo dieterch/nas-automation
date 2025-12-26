@@ -22,13 +22,13 @@ export function computeAutomationDecision(
 
   /* ------------------------------------------------------------
      2. Aufnahme-Zeitfenster inkl. Grace-Ausschaltzeit
-        [aufnahmeStart ... graceAusschaltZeit]
+        [einschaltZeit ... graceAusschaltZeit]
   ------------------------------------------------------------ */
 
   if (
     recordings.some(
       (r) =>
-        now >= r.aufnahmeStart &&
+        now >= r.einschaltZeit &&
         now < r.graceAusschaltZeit
     )
   ) {
