@@ -118,7 +118,7 @@ const automationColor = computed(() =>
 
       <v-card v-if="data.runningRecordings.length > 0" class="mb-4" title="Laufende Aufnahme(n)" color="green-lighten-3"
         novariant="tonal">
-        <v-list density="compact" class="py-0">
+        <v-list density="compact" class="py-0" bg-color="green-lighten-3">
           <v-list-item v-for="r in data.runningRecordings" :key="r.displayTitle">
             <v-list-item-title>
               {{ r.displayTitle }}
