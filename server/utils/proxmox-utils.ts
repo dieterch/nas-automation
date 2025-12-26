@@ -1,7 +1,7 @@
 import { loadConfig, saveConfig, isOncePeriodExpired } from "./config";
 
 const PRE_MIN = 30;
-const POST_MIN = 20;
+const POST_MIN = 50;
 const FALLBACK_DURATION_MIN = 60;
 
 /* ------------------------------------------------------------
