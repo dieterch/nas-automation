@@ -13,121 +13,148 @@
       </label>
     </div>
 
-    <svg
-      v-if="statusSegments.length"
-      :width="SVG_WIDTH"
-      :height="svgHeight"
-      class="timeline"
-    >
-      <!-- TIME AXIS -->
-      <g class="time-axis">
-        <g v-for="(t, i) in ticks" :key="i">
-          <line
-            :x1="xFor(t.time)"
-            :x2="xFor(t.time)"
-            y1="0"
-            :y2="HEADER_HEIGHT"
-            class="tick-line"
-          />
-          <text
-            :x="xFor(t.time)"
-            y="12"
-            text-anchor="middle"
-            class="tick-label"
-          >
-            {{ t.label }}
+    <div ref="timelineContainer" class="timeline-container">
+
+      <svg
+        v-if="statusSegments.length"
+        :width="svgWidth"
+        :height="svgHeight"
+        class="timeline"
+      >
+        <!-- TIME AXIS -->
+        <g class="time-axis">
+          <g v-for="(t, i) in ticks" :key="i">
+            <line
+              :x1="xFor(t.time)"
+              :x2="xFor(t.time)"
+              y1="0"
+              :y2="HEADER_HEIGHT"
+              class="tick-line"
+            />
+            <text
+              :x="xFor(t.time)"
+              y="12"
+              text-anchor="middle"
+              class="tick-label"
+            >
+              {{ t.label }}
+            </text>
+          </g>
+        </g>
+  
+        <!-- NOW LABEL -->
+        <g class="now-label">
+          <text :x="xFor(now) + 6" :y="HEADER_HEIGHT + 14">
+            {{ formatTime(now) }}
           </text>
         </g>
-      </g>
-
-      <!-- NOW LABEL -->
-      <g class="now-label">
-        <text :x="xFor(now) + 18" :y="HEADER_HEIGHT + 14">
-          {{ formatTime(now) }}
-        </text>
-      </g>
-
-      <!-- GRIDLINES -->
-      <g class="gridlines">
-        <g v-for="(t, i) in ticks" :key="i">
-          <line
-            :x1="xFor(t.time)"
-            :x2="xFor(t.time)"
-            :y1="HEADER_HEIGHT"
-            :y2="svgHeight"
-            class="grid-line"
+  
+        <!-- GRIDLINES -->
+        <g class="gridlines">
+          <g v-for="(t, i) in ticks" :key="i">
+            <line
+              :x1="xFor(t.time)"
+              :x2="xFor(t.time)"
+              :y1="HEADER_HEIGHT"
+              :y2="svgHeight"
+              class="grid-line"
+            />
+          </g>
+        </g>
+  
+        <!-- STATUS BACKGROUND -->
+        <g v-for="(seg, i) in statusSegments" :key="i">
+          <rect
+            :x="xFor(seg.start)"
+            y="0"
+            :width="xFor(seg.end) - xFor(seg.start)"
+            :height="svgHeight"
+            :class="`bg-${seg.status}`"
           />
         </g>
-      </g>
-
-      <!-- STATUS BACKGROUND -->
-      <g v-for="(seg, i) in statusSegments" :key="i">
-        <rect
-          :x="xFor(seg.start)"
-          y="0"
-          :width="xFor(seg.end) - xFor(seg.start)"
-          :height="svgHeight"
-          :class="`bg-${seg.status}`"
+  
+        <!-- RECORDINGS -->
+        <g v-for="(r, i) in visibleRecordings" :key="i">
+          <rect
+            :x="xFor(r.einschaltZeit)"
+            :y="rowY(i)"
+            :width="xFor(r.sendungsStart) - xFor(r.einschaltZeit)"
+            height="20"
+            class="prepostrun"
+          />
+          <rect
+            :x="xFor(r.sendungsStart)"
+            :y="rowY(i)"
+            :width="xFor(r.sendungsEnde) - xFor(r.sendungsStart)"
+            height="20"
+            class="recording"
+          />
+          <rect
+            :x="xFor(r.sendungsEnde)"
+            :y="rowY(i)"
+            :width="xFor(r.ausschaltZeit) - xFor(r.sendungsEnde)"
+            height="20"
+            class="prepostrun"
+          />
+          <rect
+            :x="xFor(r.ausschaltZeit)"
+            :y="rowY(i)"
+            :width="xFor(r.graceAusschaltZeit) - xFor(r.ausschaltZeit)"
+            height="20"
+            class="graceperiod"
+          />
+  
+          <text :x="LEFT_PAD - 10" :y="rowY(i) + 12" text-anchor="end">
+            {{ r.displayTitle }}
+          </text>
+          <text
+            :x="LEFT_PAD - 10"
+            :y="rowY(i) + 26"
+            text-anchor="end"
+            font-size="12px"
+          >
+            {{ format(r.sendungsStart) }} – {{ formatTime(r.sendungsEnde) }}
+          </text>
+        </g>
+  
+        <!-- NOW -->
+        <line
+          :x1="xFor(now)"
+          :x2="xFor(now)"
+          y1="0"
+          :y2="svgHeight"
+          class="now-line"
         />
-      </g>
-
-      <!-- RECORDINGS -->
-      <g v-for="(r, i) in visibleRecordings" :key="i">
-        <rect
-          :x="xFor(r.einschaltZeit)"
-          :y="rowY(i)"
-          :width="xFor(r.sendungsStart) - xFor(r.einschaltZeit)"
-          height="20"
-          class="prepostrun"
-        />
-        <rect
-          :x="xFor(r.sendungsStart)"
-          :y="rowY(i)"
-          :width="xFor(r.sendungsEnde) - xFor(r.sendungsStart)"
-          height="20"
-          class="recording"
-        />
-        <rect
-          :x="xFor(r.sendungsEnde)"
-          :y="rowY(i)"
-          :width="xFor(r.ausschaltZeit) - xFor(r.sendungsEnde)"
-          height="20"
-          class="prepostrun"
-        />
-        <rect
-          :x="xFor(r.ausschaltZeit)"
-          :y="rowY(i)"
-          :width="xFor(r.graceAusschaltZeit) - xFor(r.ausschaltZeit)"
-          height="20"
-          class="graceperiod"
-        />
-
-        <text :x="LEFT_PAD - 10" :y="rowY(i) + 12" text-anchor="end">
-          {{ r.displayTitle }}
-        </text>
-        <text
-          :x="LEFT_PAD - 10"
-          :y="rowY(i) + 26"
-          text-anchor="end"
-          font-size="12px"
-        >
-          {{ format(r.sendungsStart) }} – {{ formatTime(r.sendungsEnde) }}
-        </text>
-      </g>
-
-      <!-- NOW -->
-      <line
-        :x1="xFor(now)"
-        :x2="xFor(now)"
-        y1="0"
-        :y2="svgHeight"
-        class="now-line"
-      />
-    </svg>
+      </svg>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, onBeforeUnmount } from "vue";
+
+const timelineContainer = ref<HTMLElement | null>(null);
+const svgWidth = ref(1000); // fallback
+
+let ro: ResizeObserver | null = null;
+
+onMounted(() => {
+  if (!timelineContainer.value) return;
+
+  const update = () => {
+    svgWidth.value = timelineContainer.value!.clientWidth;
+  };
+
+  update();
+
+  ro = new ResizeObserver(update);
+  ro.observe(timelineContainer.value);
+});
+
+onBeforeUnmount(() => {
+  ro?.disconnect();
+});
+
 /* ============================================================
    FETCH
 ============================================================ */
@@ -226,9 +253,12 @@ const visibleRecordings = computed(() =>
    LAYOUT
 ============================================================ */
 
-const SVG_WIDTH = 1340;
+// const SVG_WIDTH = 1000;
+const SVG_WIDTH = computed(() => svgWidth.value);
 const ROW_HEIGHT = 36;
-const LEFT_PAD = 400;
+const LEFT_PAD = computed<number>(() =>
+  svgWidth.value < 900 ? 220 : 400
+);
 const RIGHT_PAD = 0;
 
 const svgHeight = computed(
@@ -257,11 +287,12 @@ const maxTime = computed(() => {
 
 function xFor(t: Date): number {
   const span = maxTime.value.getTime() - minTime.value.getTime();
-  if (span <= 0) return LEFT_PAD;
+  if (span <= 0) return LEFT_PAD.value;
+
   return (
-    LEFT_PAD +
+    LEFT_PAD.value +
     ((t.getTime() - minTime.value.getTime()) / span) *
-      (SVG_WIDTH - LEFT_PAD - RIGHT_PAD)
+      (SVG_WIDTH.value - LEFT_PAD.value - RIGHT_PAD)
   );
 }
 
@@ -385,7 +416,8 @@ function formatTime(d: Date | string | null | undefined) {
 .page { padding: 24px; font-family: system-ui; }
 .controls { margin-bottom: 12px; }
 
-.timeline { border: 1px solid #ccc; background: #e4e4e487; }
+.timeline-container { width: 100%; overflow-x: auto; }
+.timeline { border: 1px solid #ccc; background: #e4e4e487; min-width: 800px;}
 
 rect.bg-ACTIVE_RECORDING { fill: rgba(46,125,50,.15); }
 rect.bg-ACTIVE_SCHEDULED { fill: rgba(33,150,243,.18); }
