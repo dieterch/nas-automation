@@ -107,15 +107,6 @@ const automationColor = computed(() =>
         </v-card-text>
       </v-card>
 
-      <!--v-card v-if="data.runningRecordings.length > 0" class="mb-4" title="Laufende Aufnahme(n)" color="green-lighten-3"
-        novariant="tonal">
-        <v-card-text v-for="r in data.runningRecordings">
-          {{ r.displayTitle }} |
-          {{ formatTime(r.sendungsStart) }} -
-          {{ formatTime(r.sendungsEnde) }}
-        </v-card-text>
-      </v-card>-->
-
       <v-card v-if="data.runningRecordings.length > 0" class="mb-4" title="Laufende Aufnahme(n)" color="green-lighten-3"
         novariant="tonal">
         <v-list density="compact" class="py-0" bg-color="green-lighten-3">

@@ -164,6 +164,18 @@ async function ProxmoxSchedule() {
   await callApi("/api/proxmox/schedule", "POST");
   await loadconfig();
 }
+
+async function AddWindowUntilMidnight() {
+  await callApi("/api/manual/start", "POST");
+  await loadconfig();
+  await callApi("/api/automation/tick", "POST");
+}
+
+async function RemoveWindowUntilMidnight() {
+  await callApi("/api/manual/stop", "POST");
+  await loadconfig();
+  await callApi("/api/automation/tick", "POST");
+}
 </script>
 
 <template>
@@ -352,19 +364,50 @@ async function ProxmoxSchedule() {
                 </v-card-text>
               </v-card>
 
-              <v-row class="mb-4">
-                <v-col cols="12" md="4">
-                  <v-btn variant="outlined" @click="addScheduledPeriod">
+              <v-row class="mb-4" dense>
+                <v-col cols="12" md="3">
+                  <v-btn
+                    block
+                    variant="outlined"
+                    class="btn-wrap"
+                    @click="addScheduledPeriod"
+                  >
                     Zeitfenster hinzufügen
                   </v-btn>
                 </v-col>
 
-                <v-col cols="12" md="4">
-                  <v-btn variant="outlined" @click="ProxmoxSchedule">
+                <v-col cols="12" md="3">
+                  <v-btn
+                    block
+                    variant="outlined"
+                    class="btn-wrap"
+                    @click="ProxmoxSchedule"
+                  >
                     Proxmox Backup eintragen
                   </v-btn>
                 </v-col>
-                
+
+                <v-col cols="12" md="3">
+                  <v-btn
+                    block
+                    variant="outlined"
+                    class="btn-wrap"
+                    @click="AddWindowUntilMidnight"
+                  >
+                    NAS on until 24h
+                  </v-btn>
+                </v-col>
+
+                <v-col cols="12" md="3">
+                  <v-btn
+                    block
+                    variant="outlined"
+                    class="btn-wrap"
+                    @click="RemoveWindowUntilMidnight"
+                  >
+                    Remove NAS on until 24h
+                  </v-btn>
+                </v-col>
               </v-row>
             </v-card-text>
           </v-card>
@@ -377,3 +420,12 @@ async function ProxmoxSchedule() {
     </v-card>
   </v-container>
 </template>
+<style scoped>
+.btn-wrap :deep(.v-btn__content) {
+  white-space: normal;
+  line-height: 1.2;
+  font-size: 0.85rem;
+  text-align: center;
+}
+</style>
+
