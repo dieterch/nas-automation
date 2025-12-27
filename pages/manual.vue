@@ -67,22 +67,11 @@ const plexAlert = computed<{
 
 /* ---------------- NAS ACTIONS ---------------- */
 
-// async function nasOn() {
-//   await callApi("/api/nas/on", "POST");
-//   await refreshSystemStatus();
-// }
-
 async function nasOn() {
   await callApi("/api/manual/start", "POST")
   await refreshSystemStatus()
   await callApi("/api/automation/tick", "POST")
 }
-
-
-// async function nasOff() {
-//   await callApi("/api/nas/off", "POST");
-//   await refreshSystemStatus();
-// }
 
 async function nasOff() {
   await callApi("/api/manual/stop", "POST")
@@ -129,7 +118,7 @@ async function ProxmoxSchedule() {
   <v-container>
     <v-card class="pa-4">
       <v-card-title>
-        PLEX, NAS & VU+ – Manuelle Steuerung & Diagnose
+        Manuelle Steuerung & Diagnose
       </v-card-title>
 
       <v-divider class="my-4" />
