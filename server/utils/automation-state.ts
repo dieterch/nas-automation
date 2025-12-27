@@ -40,30 +40,48 @@ export interface AutomationStateFile {
    Load
 ------------------------------------------------------------ */
 
+// export function loadState(): AutomationStateFile {
+//   const now = new Date().toISOString();
+
+//   if (!existsSync(STATE_FILE)) {
+//     return {
+//       state: "IDLE",
+//       since: now,
+//       lastTickAt: now,
+//       last: {}, // ← wichtig für den Typ
+//     };
+//   }
+
+//   const parsed = JSON.parse(
+//     readFileSync(STATE_FILE, "utf-8")
+//   ) as Partial<AutomationStateFile>;
+
+//   return {
+//     state: parsed.state ?? "IDLE",
+//     since: parsed.since ?? now,
+//     lastTickAt: parsed.lastTickAt ?? now,
+//     lastDecision: parsed.lastDecision,
+//     reason: parsed.reason,
+//     last: parsed.last ?? {}, // ← Rückwärtskompatibel
+//   };
+// }
+
 export function loadState(): AutomationStateFile {
   const now = new Date().toISOString();
 
   if (!existsSync(STATE_FILE)) {
-    return {
-      state: "IDLE",
+    const initial: AutomationStateFile = {
+      state: "INIT",
       since: now,
-      lastTickAt: now,
-      last: {}, // ← wichtig für den Typ
+      lastTickAt: "1970-01-01T00:00:00.000Z", // wichtig!
+      last: {},
     };
+
+    writeFileSync(STATE_FILE, JSON.stringify(initial, null, 2));
+    return initial;
   }
 
-  const parsed = JSON.parse(
-    readFileSync(STATE_FILE, "utf-8")
-  ) as Partial<AutomationStateFile>;
-
-  return {
-    state: parsed.state ?? "IDLE",
-    since: parsed.since ?? now,
-    lastTickAt: parsed.lastTickAt ?? now,
-    lastDecision: parsed.lastDecision,
-    reason: parsed.reason,
-    last: parsed.last ?? {}, // ← Rückwärtskompatibel
-  };
+  return JSON.parse(readFileSync(STATE_FILE, "utf-8"));
 }
 
 /* ------------------------------------------------------------
