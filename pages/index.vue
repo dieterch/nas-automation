@@ -130,6 +130,29 @@ const automationColor = computed(() =>
         </v-card-text>
       </v-card>
 
+      <v-card
+        v-if="data.activeWindows.length > 0"
+        class="mb-4"
+        title="Aktive Zeitfenster"
+        color="blue-lighten-3"
+        novariant="tonal"
+      >
+        <v-list density="compact" class="py-0" bg-color="blue-lighten-3">
+          <v-list-item
+            v-for="w in data.activeWindows"
+            :key="w.id"
+          >
+            <v-list-item-title>
+              {{ w.id ?? "Zeitfenster" }}
+            </v-list-item-title>
+
+            <v-list-item-subtitle>
+              {{ w.start }} – {{ w.end }}
+            </v-list-item-subtitle>
+          </v-list-item>
+        </v-list>
+      </v-card>
+
       <v-card v-if="data.next.window" class="mb-4" color="rgba(33,150,243,.18)" novariant="tonal"
         title="Nächstes Zeitfenster" :nosubtitle=data.next.window.title>
         <v-card-text v-if="data.next.window">

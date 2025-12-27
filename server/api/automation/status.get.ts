@@ -49,6 +49,14 @@ export default defineEventHandler(async () => {
       }) ?? null
     : null;
 
+  const activeWindows: ScheduledPeriod[] | null = scheduledCheck.active
+    ? (config.SCHEDULED_ON_PERIODS as ScheduledPeriod[]).filter((w) => {
+        const start = computeStartTimestampLocal(w);
+        const end = computeEndTimestampLocal(w);
+        return now >= new Date(start) && now <= new Date(end);
+      }) ?? null
+    : null;
+
   const nextWindow: ScheduledPeriodWithStart | null =
     (config.SCHEDULED_ON_PERIODS as ScheduledPeriod[])
       .map((w) => ({
@@ -74,7 +82,7 @@ export default defineEventHandler(async () => {
       windowsActive: activeWindow ? 1 : 0,
     },
     runningRecordings: runningRecordings || null,
-    test: [],
+    activeWindows: activeWindows,
     next: {
       recording: nextRecording
         ? {
