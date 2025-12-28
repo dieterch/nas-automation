@@ -156,7 +156,7 @@ const automationColor = computed(() =>
       </v-card>
 
       <v-card
-        v-if="data.activeWindows.length > 0"
+        v-if="data?.activeWindows?.length > 0"
         class="mb-0"
         title="Aktive Zeitfenster"
         color="blue-lighten-3"
