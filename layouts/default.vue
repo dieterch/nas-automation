@@ -71,7 +71,7 @@ const drawer = ref(false);
 const menu = [
   { title: "Dashboard", to: "/" },
   { title: "Aufnahmeplan", to: "/recordings" },
-  { title: "Manual", to: "/manual" },
+  //{ title: "Manual", to: "/manual" },
   { title: "Einstellungen", to: "/settings" },
   { title: "Debug", to: "/debug" },
   { title: "Timeline", to: "/timeline" },

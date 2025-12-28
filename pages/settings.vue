@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
+const cfg = useRuntimeConfig()
 
 /* ================= TYPES ================= */
 
@@ -160,6 +161,22 @@ async function callApi(path: string, method: HttpMethod = "GET") {
   }
 }
 
+async function vuOn() {
+  await callApi("/api/vuplus/on", "POST");
+}
+
+async function vuOff() {
+  await callApi("/api/vuplus/off", "POST");
+}
+
+async function orf1() {
+  await $fetch(`http://${cfg.public.VUPLUS_IP}/api/zap?sRef=${cfg.public.ORF1}`);
+}
+
+async function UpdatePlexCache() {
+  await callApi("/api/plex/scheduled-refresh", "GET");
+}
+
 async function ProxmoxSchedule() {
   await callApi("/api/proxmox/schedule", "POST");
   await loadconfig();
@@ -176,6 +193,8 @@ async function RemoveWindowUntilMidnight() {
   await loadconfig();
   await callApi("/api/automation/tick", "POST");
 }
+
+
 </script>
 
 <template>
@@ -192,6 +211,87 @@ async function RemoveWindowUntilMidnight() {
         <v-alert v-if="success" type="success" class="mb-4">
           {{ success }}
         </v-alert>
+
+              <v-row class="mb-4" dense>
+
+                <v-col cols="12" md="4">
+                  <v-btn
+                    block
+                    variant="tonal"
+                    ncolor="primary"
+                    elevation="2"
+                    class="btn-wrap"
+                    @click="AddWindowUntilMidnight"
+                  >
+                    NAS on until 24h
+                  </v-btn>
+                </v-col>
+
+                <v-col cols="12" md="4">
+                  <v-btn
+                    block
+                    variant="tonal"
+                    ncolor="primary"
+                    elevation="2"
+                    class="btn-wrap"
+                    @click="RemoveWindowUntilMidnight"
+                  >
+                    Remove NAS on until 24h
+                  </v-btn>
+                </v-col>
+
+                <v-col cols="12" md="4">
+                  <v-btn
+                    block
+                    variant="tonal"
+                    ncolor="primary"
+                    elevation="2"
+                    class="btn-wrap"
+                    @click="UpdatePlexCache"
+                  >
+                    Update Plex Cache
+                  </v-btn>
+                </v-col>
+
+                <v-col cols="12" md="4">
+                  <v-btn
+                    block
+                    variant="tonal"
+                    ncolor="primary"
+                    elevation="2"
+                    class="btn-wrap"
+                    @click="orf1"
+                  >
+                    ORF 1
+                  </v-btn>
+                </v-col>
+
+                <v-col cols="12" md="4">
+                  <v-btn
+                    block
+                    variant="tonal"
+                    ncolor="primary"
+                    elevation="2"
+                    class="btn-wrap"
+                    @click="vuOn"
+                  >
+                    VU+ On
+                  </v-btn>
+                </v-col>
+
+                <v-col cols="12" md="4">
+                  <v-btn
+                    block
+                    variant="tonal"
+                    ncolor="primary"
+                    elevation="2"
+                    class="btn-wrap"
+                    @click="vuOff"
+                  >
+                    VU+ Off
+                  </v-btn>
+                </v-col>
+              </v-row>
 
         <template v-if="config">
           <!-- ================= ZEITEN ================= -->
@@ -368,7 +468,9 @@ async function RemoveWindowUntilMidnight() {
                 <v-col cols="12" md="3">
                   <v-btn
                     block
-                    variant="outlined"
+                    variant="tonal"
+                    ncolor="primary"
+                    elevation="2"
                     class="btn-wrap"
                     @click="addScheduledPeriod"
                   >
@@ -379,7 +481,9 @@ async function RemoveWindowUntilMidnight() {
                 <v-col cols="12" md="3">
                   <v-btn
                     block
-                    variant="outlined"
+                    variant="tonal"
+                    ncolor="primary"
+                    elevation="2"
                     class="btn-wrap"
                     @click="ProxmoxSchedule"
                   >
@@ -387,27 +491,6 @@ async function RemoveWindowUntilMidnight() {
                   </v-btn>
                 </v-col>
 
-                <v-col cols="12" md="3">
-                  <v-btn
-                    block
-                    variant="outlined"
-                    class="btn-wrap"
-                    @click="AddWindowUntilMidnight"
-                  >
-                    NAS on until 24h
-                  </v-btn>
-                </v-col>
-
-                <v-col cols="12" md="3">
-                  <v-btn
-                    block
-                    variant="outlined"
-                    class="btn-wrap"
-                    @click="RemoveWindowUntilMidnight"
-                  >
-                    Remove NAS on until 24h
-                  </v-btn>
-                </v-col>
               </v-row>
             </v-card-text>
           </v-card>
