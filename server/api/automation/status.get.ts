@@ -6,8 +6,9 @@ import type { ScheduledPeriod } from "../../utils/time-utils";
 import { isNowInScheduledPeriod } from "../../utils/time-utils";
 
 type ScheduledPeriodWithStart = ScheduledPeriod & {
-  startDate: string;
+  startDate: Date;
 };
+
 
 export default defineEventHandler(async () => {
   const now = new Date();
@@ -107,12 +108,12 @@ export default defineEventHandler(async () => {
   };
 });
 
-export function computeStartTimestampLocal(period: ScheduledPeriod): string {
+export function computeStartTimestampLocal(period: ScheduledPeriod): Date {
   const now = new Date();
 
-  function buildLocalISO(date: Date, start: string): string {
+  function buildLocalDate(date: Date, start: string): Date {
     const [h, m] = start.split(":").map(Number);
-    const d = new Date(
+    return new Date(
       date.getFullYear(),
       date.getMonth(),
       date.getDate(),
@@ -121,15 +122,11 @@ export function computeStartTimestampLocal(period: ScheduledPeriod): string {
       0,
       0
     );
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
-      d.getDate()
-    )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
   if (period.type === "once") {
     const [y, m, d] = period.date.split("-").map(Number);
-    return buildLocalISO(new Date(y, m - 1, d), period.start);
+    return buildLocalDate(new Date(y, m - 1, d), period.start);
   }
 
   if (period.type === "weekly" && period.weekdays?.length) {
@@ -138,20 +135,21 @@ export function computeStartTimestampLocal(period: ScheduledPeriod): string {
     let target = sorted.find((d) => d >= today) ?? sorted[0];
     let offset = target - today;
     if (offset < 0) offset += 7;
+
     const date = new Date(now);
     date.setDate(now.getDate() + offset);
-    return buildLocalISO(date, period.start);
+    return buildLocalDate(date, period.start);
   }
 
-  return buildLocalISO(now, period.start);
+  return buildLocalDate(now, period.start);
 }
 
-function computeEndTimestampLocal(period: ScheduledPeriod): string {
+export function computeEndTimestampLocal(period: ScheduledPeriod): Date {
   const now = new Date();
 
-  function buildLocalISO(date: Date, end: string): string {
+  function buildLocalDate(date: Date, end: string): Date {
     const [h, m] = end.split(":").map(Number);
-    const d = new Date(
+    return new Date(
       date.getFullYear(),
       date.getMonth(),
       date.getDate(),
@@ -160,15 +158,11 @@ function computeEndTimestampLocal(period: ScheduledPeriod): string {
       0,
       0
     );
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
-      d.getDate()
-    )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
   if (period.type === "once") {
     const [y, m, d] = period.date.split("-").map(Number);
-    return buildLocalISO(new Date(y, m - 1, d), period.end);
+    return buildLocalDate(new Date(y, m - 1, d), period.end);
   }
 
   if (period.type === "weekly" && period.weekdays?.length) {
@@ -177,13 +171,15 @@ function computeEndTimestampLocal(period: ScheduledPeriod): string {
     let target = sorted.find((d) => d >= today) ?? sorted[0];
     let offset = target - today;
     if (offset < 0) offset += 7;
+
     const date = new Date(now);
     date.setDate(now.getDate() + offset);
-    return buildLocalISO(date, period.end);
+    return buildLocalDate(date, period.end);
   }
 
-  return buildLocalISO(now, period.end);
+  return buildLocalDate(now, period.end);
 }
+
 
 function human(ms: number) {
   if (ms <= 0) return "0m";
