@@ -160,7 +160,9 @@ function isNowInOnceRange(
   startStr: string,
   endStr: string
 ): boolean {
-  const base = new Date(dateStr + "T00:00:00");
+  // 🔴 FIX: niemals Date-Strings parsen
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const base = new Date(y, m - 1, d);
 
   const [sh, sm] = startStr.split(":").map(Number);
   const [eh, em] = endStr.split(":").map(Number);
@@ -178,3 +180,4 @@ function isNowInOnceRange(
 
   return now >= start && now <= end;
 }
+
