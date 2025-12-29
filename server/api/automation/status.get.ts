@@ -1,4 +1,4 @@
-import { loadState, saveState } from "../../utils/automation-state";
+import { loadState } from "../../utils/automation-state";
 import { loadConfig } from "../../utils/config";
 import { ParsedRecording, parseRecording } from "../../../utils/plex-recording";
 import { readPlexCache } from "../../utils/plex-cache";
@@ -8,7 +8,6 @@ import { isNowInScheduledPeriod } from "../../utils/time-utils";
 type ScheduledPeriodWithStart = ScheduledPeriod & {
   startDate: Date;
 };
-
 
 export default defineEventHandler(async () => {
   const now = new Date();
@@ -46,7 +45,7 @@ export default defineEventHandler(async () => {
     ? (config.SCHEDULED_ON_PERIODS as ScheduledPeriod[]).find((w) => {
         const start = computeStartTimestampLocal(w);
         const end = computeEndTimestampLocal(w);
-        return now >= new Date(start) && now <= new Date(end);
+        return now >= start && now <= end;
       }) ?? null
     : null;
 
@@ -54,20 +53,20 @@ export default defineEventHandler(async () => {
     ? (config.SCHEDULED_ON_PERIODS as ScheduledPeriod[]).filter((w) => {
         const start = computeStartTimestampLocal(w);
         const end = computeEndTimestampLocal(w);
-        return now >= new Date(start) && now <= new Date(end);
+        return now >= start && now <= end;
       }) ?? null
     : null;
 
   const nextWindow: ScheduledPeriodWithStart | null =
     (config.SCHEDULED_ON_PERIODS as ScheduledPeriod[])
-      .map((w) => ({
+      .map((w): ScheduledPeriodWithStart => ({
         ...w,
         startDate: computeStartTimestampLocal(w),
       }))
-      .filter((w) => new Date(w.startDate) > now)[0] ?? null;
+      .filter((w) => w.startDate.getTime() > now.getTime())[0] ?? null;
 
   return {
-    now:now,
+    now,
     automation: {
       state: mapVariant(state.state),
       since: state.since,
@@ -83,7 +82,7 @@ export default defineEventHandler(async () => {
       windowsActive: activeWindow ? 1 : 0,
     },
     runningRecordings: runningRecordings || null,
-    activeWindows: activeWindows,
+    activeWindows,
     next: {
       recording: nextRecording
         ? {
@@ -97,22 +96,25 @@ export default defineEventHandler(async () => {
       window: nextWindow
         ? {
             title: nextWindow.label ?? nextWindow.id,
-            at: new Date(nextWindow.startDate),
+            at: nextWindow.startDate,
             inHuman: human(
-              new Date(nextWindow.startDate).getTime() - now.getTime()
+              nextWindow.startDate.getTime() - now.getTime()
             ),
           }
         : null,
-      //   automation: nextAutomationEvent,
     },
   };
 });
 
+/* ------------------------------------------------------------------
+   ZEITBERECHNUNG – LOKAL, DATE-BASED
+------------------------------------------------------------------ */
+
 export function computeStartTimestampLocal(period: ScheduledPeriod): Date {
   const now = new Date();
 
-  function buildLocalDate(date: Date, start: string): Date {
-    const [h, m] = start.split(":").map(Number);
+  function buildLocalDate(date: Date, time: string): Date {
+    const [h, m] = time.split(":").map(Number);
     return new Date(
       date.getFullYear(),
       date.getMonth(),
@@ -147,8 +149,8 @@ export function computeStartTimestampLocal(period: ScheduledPeriod): Date {
 export function computeEndTimestampLocal(period: ScheduledPeriod): Date {
   const now = new Date();
 
-  function buildLocalDate(date: Date, end: string): Date {
-    const [h, m] = end.split(":").map(Number);
+  function buildLocalDate(date: Date, time: string): Date {
+    const [h, m] = time.split(":").map(Number);
     return new Date(
       date.getFullYear(),
       date.getMonth(),
@@ -180,6 +182,7 @@ export function computeEndTimestampLocal(period: ScheduledPeriod): Date {
   return buildLocalDate(now, period.end);
 }
 
+/* ------------------------------------------------------------------ */
 
 function human(ms: number) {
   if (ms <= 0) return "0m";
