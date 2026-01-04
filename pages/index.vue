@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from "vue";
+const cfg = useRuntimeConfig();
 
 const data = ref<any | null>(null);
 const debugData = ref<any | null>(null);
@@ -61,10 +62,151 @@ const automationColor = computed(() =>
     ? "rgba(46,125,50,.15)"
     : "rgba(198,40,40,.12)"
 );
+
+type HttpMethod =
+  | "GET"
+  | "POST"
+  | "PUT"
+  | "PATCH"
+  | "DELETE"
+  | "get"
+  | "post"
+  | "put"
+  | "patch"
+  | "delete";
+
+async function callApi(path: string, method: HttpMethod = "GET") {
+  loading.value = true;
+  try {
+    const result = await $fetch(path, { method });
+    return result;
+  } catch (err: any) {
+    throw err;
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function vuOn() {
+  await callApi("/api/vuplus/on", "POST");
+}
+
+async function vuOff() {
+  await callApi("/api/vuplus/off", "POST");
+}
+
+async function orf1() {
+  await $fetch(
+    `http://${cfg.public.VUPLUS_IP}/api/zap?sRef=${cfg.public.ORF1}`
+  );
+}
+
+async function UpdatePlexCache() {
+  await callApi("/api/plex/scheduled-refresh", "GET");
+}
+
+async function ProxmoxSchedule() {
+  await callApi("/api/proxmox/schedule", "POST");
+}
+
+async function AddWindowUntilMidnight() {
+  await callApi("/api/manual/start", "POST");
+  await callApi("/api/automation/tick", "POST");
+}
+
+async function RemoveWindowUntilMidnight() {
+  await callApi("/api/manual/stop", "POST");
+  await callApi("/api/automation/tick", "POST");
+}
 </script>
 
 <template>
   <v-container>
+    <!-- Action Buttons -->
+    <v-card class="mb-4">
+      <v-card-text>
+        <v-row class="mb-0" dense>
+          <v-col cols="12" md="4">
+            <v-btn
+              block
+              variant="tonal"
+              ncolor="primary"
+              elevation="2"
+              class="btn-wrap"
+              @click="AddWindowUntilMidnight"
+            >
+              NAS on until 24h
+            </v-btn>
+          </v-col>
+
+          <v-col cols="12" md="4">
+            <v-btn
+              block
+              variant="tonal"
+              ncolor="primary"
+              elevation="2"
+              class="btn-wrap"
+              @click="RemoveWindowUntilMidnight"
+            >
+              Remove NAS on until 24h
+            </v-btn>
+          </v-col>
+
+          <v-col cols="12" md="4">
+            <v-btn
+              block
+              variant="tonal"
+              ncolor="primary"
+              elevation="2"
+              class="btn-wrap"
+              @click="UpdatePlexCache"
+            >
+              Update Plex Cache
+            </v-btn>
+          </v-col>
+
+          <v-col cols="12" md="4">
+            <v-btn
+              block
+              variant="tonal"
+              ncolor="primary"
+              elevation="2"
+              class="btn-wrap"
+              @click="orf1"
+            >
+              ORF 1
+            </v-btn>
+          </v-col>
+
+          <v-col cols="12" md="4">
+            <v-btn
+              block
+              variant="tonal"
+              ncolor="primary"
+              elevation="2"
+              class="btn-wrap"
+              @click="vuOn"
+            >
+              VU+ On
+            </v-btn>
+          </v-col>
+
+          <v-col cols="12" md="4">
+            <v-btn
+              block
+              variant="tonal"
+              ncolor="primary"
+              elevation="2"
+              class="btn-wrap"
+              @click="vuOff"
+            >
+              VU+ Off
+            </v-btn>
+          </v-col>
+        </v-row>
+      </v-card-text>
+    </v-card>
+
     <v-progress-circular v-if="loading" indeterminate />
     <v-alert v-else-if="error" type="error">{{ error }}</v-alert>
 
