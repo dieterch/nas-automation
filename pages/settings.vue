@@ -260,19 +260,6 @@ async function RemoveWindowUntilMidnight() {
                     ncolor="primary"
                     elevation="2"
                     class="btn-wrap"
-                    @click="orf1"
-                  >
-                    ORF 1
-                  </v-btn>
-                </v-col>
-
-                <v-col cols="12" md="4">
-                  <v-btn
-                    block
-                    variant="tonal"
-                    ncolor="primary"
-                    elevation="2"
-                    class="btn-wrap"
                     @click="vuOn"
                   >
                     VU+ On
